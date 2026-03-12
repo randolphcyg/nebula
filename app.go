@@ -45,8 +45,8 @@ func (a *App) GetWiresharkVersion() (string, error) {
 }
 
 // 分页获取数据包列表
-func (a *App) GetPacketsByPage(filepath string, page int, size int) (string, error) {
-	return a.AnalyzerService.GetPacketsByPage(filepath, page, size)
+func (a *App) GetPacketsByPage(filepath string, page int, size int, bpfFilter string) (string, error) {
+	return a.AnalyzerService.GetPacketsByPage(filepath, page, size, bpfFilter)
 }
 
 // 获取单帧的详细解析数据 (Protocol Tree & Hex)
@@ -58,9 +58,14 @@ func (a *App) GetPacketHex(filepath string, index int) (string, error) {
 	return a.AnalyzerService.GetPacketHex(filepath, index)
 }
 
-// 慎用：一次性获取所有数据包
-func (a *App) GetAllFrames(filepath string) (string, error) {
-	return a.AnalyzerService.GetAllFrames(filepath)
+// 一次性获取所有数据包
+func (a *App) GetAllFrames(filepath string, bpfFilter string) (string, error) {
+	return a.AnalyzerService.GetAllFrames(filepath, bpfFilter)
+}
+
+// 安全且极速地追踪并重组数据流
+func (a *App) FollowStream(filepath string, bpfFilter string, protocol string) (string, error) {
+	return a.AnalyzerService.FollowStream(filepath, bpfFilter, protocol)
 }
 
 // ============================

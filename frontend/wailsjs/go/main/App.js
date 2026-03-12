@@ -10,8 +10,12 @@ export function DeleteFile(arg1) {
   return window['go']['main']['App']['DeleteFile'](arg1);
 }
 
-export function GetAllFrames(arg1) {
-  return window['go']['main']['App']['GetAllFrames'](arg1);
+export function FollowStream(arg1, arg2, arg3) {
+  return window['go']['main']['App']['FollowStream'](arg1, arg2, arg3);
+}
+
+export function GetAllFrames(arg1, arg2) {
+  return window['go']['main']['App']['GetAllFrames'](arg1, arg2);
 }
 
 export function GetFileList(arg1) {
@@ -26,8 +30,8 @@ export function GetPacketHex(arg1, arg2) {
   return window['go']['main']['App']['GetPacketHex'](arg1, arg2);
 }
 
-export function GetPacketsByPage(arg1, arg2, arg3) {
-  return window['go']['main']['App']['GetPacketsByPage'](arg1, arg2, arg3);
+export function GetPacketsByPage(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['GetPacketsByPage'](arg1, arg2, arg3, arg4);
 }
 
 export function GetWiresharkVersion() {

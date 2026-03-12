@@ -35,6 +35,7 @@ type baseRequest struct {
 	Filepath  string `json:"filepath"`
 	IsDebug   bool   `json:"isDebug"`
 	IgnoreErr bool   `json:"ignoreErr"`
+	BpfFilter string `json:"bpfFilter"`
 }
 
 type getByPageRequest struct {
@@ -73,12 +74,13 @@ func (s *Service) GetWiresharkVersion() (string, error) {
 }
 
 // 分页获取数据包
-func (s *Service) GetPacketsByPage(filepath string, page int, size int) (string, error) {
+func (s *Service) GetPacketsByPage(fileName string, page int, size int, bpfFilter string) (string, error) {
 	reqBody := getByPageRequest{
 		baseRequest: baseRequest{
-			Filepath:  toContainerPath(filepath), // 转换为容器内路径
+			Filepath:  toContainerPath(fileName),
 			IsDebug:   false,
-			IgnoreErr: true, // 容错处理
+			IgnoreErr: true,
+			BpfFilter: bpfFilter,
 		},
 		Page: page,
 		Size: size,
@@ -92,11 +94,12 @@ func (s *Service) GetPacketsByPage(filepath string, page int, size int) (string,
 }
 
 // 获取所有数据包 (慎用，仅限小文件)
-func (s *Service) GetAllFrames(filepath string) (string, error) {
+func (s *Service) GetAllFrames(filepath string, bpfFilter string) (string, error) {
 	reqBody := baseRequest{
 		Filepath:  toContainerPath(filepath),
 		IsDebug:   false,
 		IgnoreErr: true,
+		BpfFilter: bpfFilter, // 将流过滤条件透传给底层
 	}
 
 	respData, err := s.doPost(baseURL+"/frames/all", reqBody)
@@ -138,6 +141,69 @@ func (s *Service) GetPacketHex(filepath string, index int) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return string(respData), nil
+}
+
+// ======================= 流追踪专属 DTO =======================
+type streamPayload struct {
+	Dir     string `json:"dir"`
+	HexData string `json:"hexData"`
+}
+
+type streamResult struct {
+	Payloads    []streamPayload `json:"payloads"`
+	ClientNode  string          `json:"clientNode"`
+	ServerNode  string          `json:"serverNode"`
+	ClientBytes int             `json:"clientBytes"`
+	ServerBytes int             `json:"serverBytes"`
+}
+
+// 专门用于轻量化解析（忽略无用的海量协议树节点）
+type lightFrame struct {
+	BaseLayers struct {
+		WsCol *struct {
+			DefSrc string `json:"_ws.col.def_src"`
+			DefDst string `json:"_ws.col.def_dst"`
+		} `json:"WsCol"`
+		Tcp *struct {
+			SrcPort int    `json:"tcp.srcport"`
+			DstPort int    `json:"tcp.dstport"`
+			Payload string `json:"tcp.payload"`
+		} `json:"Tcp"`
+		Udp *struct {
+			SrcPort int    `json:"udp.srcport"`
+			DstPort int    `json:"udp.dstport"`
+			Payload string `json:"udp.payload"`
+		} `json:"Udp"`
+	} `json:"BaseLayers"`
+}
+
+// ======================= 新增接口 =======================
+
+// 安全且极速地追踪并重组数据流
+func (s *Service) FollowStream(filepath string, bpfFilter string, protocol string) (string, error) {
+	reqBody := struct {
+		Filepath  string `json:"filepath"`
+		IsDebug   bool   `json:"isDebug"`
+		IgnoreErr bool   `json:"ignoreErr"`
+		BpfFilter string `json:"bpfFilter"`
+		Protocol  string `json:"protocol"`
+	}{
+		Filepath:  toContainerPath(filepath),
+		IsDebug:   false,
+		IgnoreErr: true,
+		BpfFilter: bpfFilter,
+		Protocol:  protocol,
+	}
+
+	// 请求极速聚合接口
+	respData, err := s.doPost(baseURL+"/frames/stream", reqBody)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println(string(respData))
+
 	return string(respData), nil
 }
 

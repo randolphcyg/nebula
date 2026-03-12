@@ -7,7 +7,9 @@ export function BatchDeleteFiles(arg1:Array<number>):Promise<void>;
 
 export function DeleteFile(arg1:number):Promise<void>;
 
-export function GetAllFrames(arg1:string):Promise<string>;
+export function FollowStream(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function GetAllFrames(arg1:string,arg2:string):Promise<string>;
 
 export function GetFileList(arg1:pcap.FileQueryReq):Promise<pcap.FileQueryResp>;
 
@@ -15,7 +17,7 @@ export function GetPacketDetail(arg1:string,arg2:number):Promise<string>;
 
 export function GetPacketHex(arg1:string,arg2:number):Promise<string>;
 
-export function GetPacketsByPage(arg1:string,arg2:number,arg3:number):Promise<string>;
+export function GetPacketsByPage(arg1:string,arg2:number,arg3:number,arg4:string):Promise<string>;
 
 export function GetWiresharkVersion():Promise<string>;
 
