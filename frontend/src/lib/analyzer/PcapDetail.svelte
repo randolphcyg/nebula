@@ -13,13 +13,11 @@
     let selectedRowIndex: number | null = null;
     $: selectedPacket = packets.find(p => p.index === selectedRowIndex);
 
-    // ==== 过滤与分页状态 ====
+    // ==== 过滤与分页状态 (✨ 核心修改区) ====
     let globalFilter = "";
     let packetPage = 1;
-    let packetPageSize = 10;
-    let packetTotal = 0;
-    $: packetTotalPages = packetTotal === -1 ? packetPage + 1 : (Math.ceil(packetTotal / packetPageSize) || 1);
-    let jumpPageNum = 1;
+    let packetPageSize = 10; // 默认调整为 10，更适合上下翻页体验
+    let hasMore = true;      // 新增：判断是否有下一页
 
     let filterProtocol = "";
     let filterIp = "";
@@ -47,6 +45,7 @@
     // 初始化监听
     $: if (file) {
         packetPage = 1;
+        hasMore = true;
         selectedDetail = null;
         selectedRowIndex = null;
         resetFilters();
@@ -61,6 +60,7 @@
 
     function applyGlobalFilter() {
         packetPage = 1;
+        hasMore = true;
         selectedDetail = null;
         selectedRowIndex = null;
         loadAnalyzeData();
@@ -98,7 +98,6 @@
         streamServerBytes = 0;
 
         try {
-            // 【核心优化】：将重负载全量拉取+海量解析的工作移交给 Go，仅获取聚合后的几 KB 成果！
             const resStr = await FollowStream(file.filePath, globalFilter, protocol);
             const streamData = JSON.parse(resStr);
 
@@ -124,18 +123,20 @@
         streamPayloads = [];
     }
 
-    // ==== 数据加载核心逻辑 ====
+    // ==== 数据加载核心逻辑 (✨ 核心修改区) ====
     async function loadAnalyzeData() {
         if (!file) return;
         isLoadingData = true;
-        packets = [];
+
         try {
             const resStr = await GetPacketsByPage(file.filePath, packetPage, packetPageSize, globalFilter);
             const resData = JSON.parse(resStr);
 
             if (resData) {
-                packetTotal = resData.total !== undefined ? resData.total : 0;
-                if (resData.list) {
+                const backendHasMore = resData.has_more ?? resData.hasMore ?? resData.HasMore;
+                hasMore = backendHasMore === true;
+
+                if (resData.list && resData.list.length > 0) {
                     packets = resData.list.map((frame: any, idx: number) => {
                         const bl = frame.BaseLayers || {};
                         const col = bl.WsCol || {};
@@ -163,19 +164,23 @@
                     if (packets.length > 0) {
                         selectPacket(packets[0].index);
                     }
+                } else {
+                    // 如果 list 为空，说明真的没数据了
+                    packets = [];
+                    hasMore = false;
                 }
             }
         } catch (err) {
             console.error("加载数据包失败:", err);
+            hasMore = false;
         } finally {
             isLoadingData = false;
         }
     }
 
     function changePacketPage(page: number) {
-        if (page >= 1 && page <= packetTotalPages) {
+        if (page >= 1) {
             packetPage = page;
-            jumpPageNum = page;
             selectedDetail = null;
             selectedRowIndex = null;
             resetFilters();
@@ -262,7 +267,7 @@
     <div class="level-box level-2">
         <div class="level-header flex-between">
             <h3><span class="level-num">2</span> 文件帧提取 (Frames)
-                <span class="sub-title">当前加载: {packets.length} 帧</span>
+                <span class="sub-title">当前页渲染: {packets.length} 帧</span>
             </h3>
 
             <div class="global-filter-bar">
@@ -277,7 +282,7 @@
                         <button class="clear-btn" title="清空过滤器" on:click={clearGlobalFilter}>×</button>
                     {/if}
                 </div>
-                <button class="action-btn" on:click={applyGlobalFilter}>查询</button>
+                <button class="action-btn" on:click={applyGlobalFilter} disabled={isLoadingData}>查询</button>
             </div>
         </div>
 
@@ -314,8 +319,8 @@
         <div class="pagination">
             <div class="page-info">
                 <span>
-                    引擎匹配: {packetTotal === -1 ? '计算中 (10000+)' : packetTotal} 帧
-                    (第 {packetPage} / {packetTotal === -1 ? '?' : packetTotalPages} 页)
+                    当前第 <strong style="color: #38bdf8;">{packetPage}</strong> 页
+                    {#if !hasMore} <span style="color: #94a3b8; font-size: 0.75rem;">(已到底部)</span> {/if}
                 </span>
                 <select class="size-selector" bind:value={packetPageSize} on:change={handleSizeChange}>
                     <option value={10}>10 帧/页</option>
@@ -326,13 +331,20 @@
             </div>
 
             <div class="page-controls">
-                <button disabled={packetPage <= 1} on:click={() => changePacketPage(1)}>首页</button>
-                <button disabled={packetPage <= 1} on:click={() => changePacketPage(packetPage - 1)}>上一页</button>
-                <span class="jump-box">
-                    跳至 <input type="number" min="1" max={packetTotal === -1 ? 9999 : packetTotalPages} bind:value={jumpPageNum} on:keyup={(e) => e.key === 'Enter' && changePacketPage(jumpPageNum)} /> 页
-                </span>
-                <button disabled={packetPage >= packetTotalPages} on:click={() => changePacketPage(packetPage + 1)}>下一页</button>
-                <button disabled={packetTotal === -1 || packetPage >= packetTotalPages} on:click={() => changePacketPage(packetTotalPages)}>尾页</button>
+                <button
+                    disabled={packetPage <= 1 || isLoadingData}
+                    on:click={() => changePacketPage(1)}
+                >首页</button>
+
+                <button
+                    disabled={packetPage <= 1 || isLoadingData}
+                    on:click={() => changePacketPage(packetPage - 1)}
+                >上一页</button>
+
+                <button
+                    disabled={!hasMore || isLoadingData}
+                    on:click={() => changePacketPage(packetPage + 1)}
+                >下一页</button>
             </div>
         </div>
     </div>
@@ -459,7 +471,8 @@
     .clear-btn { position: absolute; right: 4px; background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0 4px; transition: color 0.2s; }
     .clear-btn:hover { color: #f8fafc; }
     .action-btn { background: #1e293b; border: 1px solid #334155; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
-    .action-btn:hover { background: #3b82f6; }
+    .action-btn:hover:not(:disabled) { background: #3b82f6; }
+    .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .packet-list-area { flex: 1; overflow: auto; }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem; table-layout: fixed;}
@@ -470,18 +483,14 @@
     .info-cell { overflow: hidden; text-overflow: ellipsis; }
     .badge { background: #1e293b; padding: 2px 6px; border-radius: 4px; font-family: monospace; border: 1px solid #334155;}
 
-    /* 分页器 */
-    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: #0f172a; border-top: 1px solid #1e293b; font-size: 0.8rem; color: #94a3b8; }
+    /* 分页器 (✨ 更新样式) */
+    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: #0f172a; border-top: 1px solid #1e293b; font-size: 0.85rem; color: #94a3b8; }
     .page-info { display: flex; align-items: center; gap: 12px; }
     .size-selector { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; outline: none; font-size: 0.75rem; cursor: pointer; }
     .page-controls { display: flex; align-items: center; gap: 6px; }
-    .page-controls button { background: #1e293b; border: 1px solid #334155; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+    .page-controls button { background: #1e293b; border: 1px solid #334155; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-size: 0.8rem;}
     .page-controls button:hover:not(:disabled) { background: #3b82f6; border-color: #3b82f6; }
     .page-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .jump-box { display: flex; align-items: center; gap: 4px; margin: 0 4px; }
-    .jump-box input { background: #1e293b; border: 1px solid #334155; color: white; width: 40px; padding: 3px; border-radius: 4px; text-align: center; outline: none; font-size: 0.8rem; }
-    .jump-box input:focus { border-color: #4f46e5; }
-    .jump-box input::-webkit-outer-spin-button, .jump-box input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
     /* ================= 层级 3: 帧系列透视 ================= */
     .level-3 { min-height: 550px; flex: 1 0 auto; }

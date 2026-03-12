@@ -206,7 +206,7 @@
                                                                            bind:value={searchFileName}
                                                                            on:keyup={(e) => e.key === 'Enter' && handleSearch()}
                                                                            placeholder="搜文件名"/></div>
-        <div class="filter-group"><label for="sSize">文件大小:</label><input id="sSize" type="text"
+        <div class="filter-group"><label for="sSize">大小:</label><input id="sSize" type="text"
                                                                              bind:value={searchFileSize}
                                                                              on:keyup={(e) => e.key === 'Enter' && handleSearch()}
                                                                              placeholder="如 1.5 MB"/></div>
