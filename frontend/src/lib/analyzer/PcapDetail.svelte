@@ -41,6 +41,7 @@
     let streamServerNode = "Server";
     let streamClientBytes = 0;
     let streamServerBytes = 0;
+    let streamPacketCount = 0;
 
     // 初始化监听
     $: if (file) {
@@ -106,6 +107,7 @@
         streamServerNode = "Server";
         streamClientBytes = 0;
         streamServerBytes = 0;
+        streamPacketCount = 0;
 
         try {
             const resStr = await FollowStream(file.filePath, globalFilter, protocol);
@@ -116,6 +118,7 @@
                 streamServerNode = streamData.serverNode || "Server";
                 streamClientBytes = streamData.clientBytes || 0;
                 streamServerBytes = streamData.serverBytes || 0;
+                streamPacketCount = streamData.packetCount || 0;
                 streamPayloads = streamData.payloads || [{ dir: 'client', hexData: "" }];
             } else {
                 streamPayloads = [{ dir: 'client', hexData: "" }];
@@ -421,6 +424,7 @@
         serverNode={streamServerNode}
         clientBytes={streamClientBytes}
         serverBytes={streamServerBytes}
+        packetCount={streamPacketCount}
         on:close={handleStreamModalClose}
         on:switchStream={(e) => followStream(e.detail, streamCurrentProto)}
 />

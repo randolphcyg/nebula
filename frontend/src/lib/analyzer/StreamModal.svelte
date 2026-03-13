@@ -11,6 +11,7 @@
     export let serverNode: string = "Server";
     export let clientBytes: number = 0;
     export let serverBytes: number = 0;
+    export let packetCount: number = 0;
 
     const dispatch = createEventDispatcher();
 
@@ -198,10 +199,16 @@
                     <div class="control-item stream-navigator">
                         <span class="ctrl-label">流</span>
                         <div class="spinner-group">
-                            <button class="spin-btn" on:click={() => dispatch('switchStream', streamId - 1)} disabled={streamId <= 0}>▼</button>
-                            <input type="number" class="stream-input" value={streamId}
-                                   on:change={(e) => dispatch('switchStream', parseInt(e.target.value))} />
-                            <button class="spin-btn" on:click={() => dispatch('switchStream', streamId + 1)}>▲</button>
+                            <button class="spin-btn"
+                                    on:click={() => dispatch('switchStream', streamId - 1)}
+                                    disabled={streamId <= 0}>▼</button>
+
+                            <input type="number" class="stream-input" min="0" value={streamId}
+                                   on:change={(e) => dispatch('switchStream', Math.max(0, parseInt(e.target.value) || 0))} />
+
+                            <button class="spin-btn"
+                                    on:click={() => dispatch('switchStream', streamId + 1)}
+                                    disabled={packetCount === 0}>▲</button>
                         </div>
                     </div>
                 </div>
