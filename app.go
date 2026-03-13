@@ -68,6 +68,11 @@ func (a *App) FollowStream(filepath string, bpfFilter string, protocol string) (
 	return a.AnalyzerService.FollowStream(filepath, bpfFilter, protocol)
 }
 
+// 获取网卡列表
+func (a *App) GetInterfaces() (string, error) {
+	return a.AnalyzerService.GetInterfaces()
+}
+
 // ============================
 // pcap
 // ============================

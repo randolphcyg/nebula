@@ -1,12 +1,14 @@
 <script lang="ts">
     import PcapList from './analyzer/PcapList.svelte';
     import PcapDetail from './analyzer/PcapDetail.svelte';
+    import InterfaceList from './analyzer/InterfaceList.svelte';
 
     // 路由状态：仪表盘 -> 列表页 -> 详情页
     let currentView: 'dashboard' | 'pcap-list' | 'pcap-detail' | 'live' | 'auto' = 'dashboard';
 
     // 跨页面传递的文件对象
     let selectedFile: any = null;
+    let selectedInterface: any = null;
 
     const features = [
         {
@@ -16,7 +18,7 @@
             icon: '📂',
             status: 'Ready'
         },
-        {id: 'live', title: '网卡实时抓包', desc: '基于 libpcap 捕获网卡实时流量。', icon: '⚡', status: 'Planning'},
+        {id: 'live', title: '网卡实时抓包', desc: '基于 libpcap 捕获网卡实时流量。', icon: '⚡', status: 'Ready'},
         {
             id: 'auto',
             title: '车载/工控协议专区',
@@ -30,10 +32,16 @@
         currentView = viewId;
     }
 
-    // 接收列表页派发的 analyze 事件
     function handleAnalyze(event: CustomEvent) {
         selectedFile = event.detail;
         currentView = 'pcap-detail';
+    }
+
+    function handleStartCapture(event: CustomEvent) {
+        selectedInterface = event.detail;
+        // 这里你可以跳转到类似 PcapDetail 的 LiveDetail 实时抓包渲染页
+        // 目前暂时仅弹窗示意
+        alert(`即将启动针对网卡 [${selectedInterface.name}] 的实时抓包功能，功能正在对接中...`);
     }
 </script>
 
@@ -61,10 +69,13 @@
             <div class="sub-header">
                 {#if currentView === 'pcap-list'}
                     <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
-                    <span class="title">离线流量分析</span>
+                    <span class="title">离线流量包列表</span>
                 {:else if currentView === 'pcap-detail'}
                     <button class="back-btn" on:click={() => navigateTo('pcap-list')}>← 返回文件列表</button>
                     <span class="title">正在分析: <strong class="highlight">{selectedFile?.fileName}</strong></span>
+                {:else if currentView === 'live'}
+                    <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
+                    <span class="title">网卡列表</span>
                 {:else}
                     <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
                 {/if}
@@ -75,6 +86,8 @@
                     <PcapList on:analyze={handleAnalyze}/>
                 {:else if currentView === 'pcap-detail'}
                     <PcapDetail file={selectedFile}/>
+                {:else if currentView === 'live'}
+                    <InterfaceList on:capture={handleStartCapture} />
                 {:else}
                     <div class="wip"><h2>模块正在开发接入中...</h2></div>
                 {/if}

@@ -168,6 +168,15 @@ func (s *Service) FollowStream(filepath string, bpfFilter string, protocol strin
 	return string(respData), nil
 }
 
+// 获取网卡列表 (用于实时抓包)
+func (s *Service) GetInterfaces() (string, error) {
+	respData, err := s.doGet(baseURL + "/interfaces")
+	if err != nil {
+		return "", err
+	}
+	return string(respData), nil
+}
+
 // ======================= 内部辅助工具 =======================
 
 // 路径转换工具：无论前端传绝对路径还是文件名，都转换为容器内绝对路径

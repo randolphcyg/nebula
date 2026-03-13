@@ -13,6 +13,8 @@ export function GetAllFrames(arg1:string,arg2:string):Promise<string>;
 
 export function GetFileList(arg1:pcap.FileQueryReq):Promise<pcap.FileQueryResp>;
 
+export function GetInterfaces():Promise<string>;
+
 export function GetPacketDetail(arg1:string,arg2:number):Promise<string>;
 
 export function GetPacketHex(arg1:string,arg2:number):Promise<string>;

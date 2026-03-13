@@ -22,6 +22,10 @@ export function GetFileList(arg1) {
   return window['go']['main']['App']['GetFileList'](arg1);
 }
 
+export function GetInterfaces() {
+  return window['go']['main']['App']['GetInterfaces']();
+}
+
 export function GetPacketDetail(arg1, arg2) {
   return window['go']['main']['App']['GetPacketDetail'](arg1, arg2);
 }
