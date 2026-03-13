@@ -1,12 +1,13 @@
 <script lang="ts">
-    import PcapList from './analyzer/PcapList.svelte';
-    import PcapDetail from './analyzer/PcapDetail.svelte';
-    import InterfaceList from './analyzer/InterfaceList.svelte';
+    import PcapList from '../analyzer/pages/PcapList.svelte';
+    import PcapDetail from '../analyzer/pages/PcapDetail.svelte';
+    import InterfaceList from '../analyzer/pages/InterfaceList.svelte';
+    import Profile from '../user/pages/Profile.svelte';
+    import { info as showInfo } from '../../stores/toast';
+    import { onMount } from 'svelte';
 
-    // 路由状态：仪表盘 -> 列表页 -> 详情页
-    let currentView: 'dashboard' | 'pcap-list' | 'pcap-detail' | 'live' | 'auto' = 'dashboard';
+    let currentView: 'dashboard' | 'pcap-list' | 'pcap-detail' | 'live' | 'auto' | 'profile' = 'dashboard';
 
-    // 跨页面传递的文件对象
     let selectedFile: any = null;
     let selectedInterface: any = null;
 
@@ -18,7 +19,7 @@
             icon: '📂',
             status: 'Ready'
         },
-        {id: 'live', title: '网卡实时抓包', desc: '基于 libpcap 捕获网卡实时流量。', icon: '⚡', status: 'Ready'},
+        { id: 'live', title: '网卡实时抓包', desc: '基于 libpcap 捕获网卡实时流量。', icon: '⚡', status: 'Ready' },
         {
             id: 'auto',
             title: '车载/工控协议专区',
@@ -39,10 +40,24 @@
 
     function handleStartCapture(event: CustomEvent) {
         selectedInterface = event.detail;
-        // 这里你可以跳转到类似 PcapDetail 的 LiveDetail 实时抓包渲染页
-        // 目前暂时仅弹窗示意
-        alert(`即将启动针对网卡 [${selectedInterface.name}] 的实时抓包功能，功能正在对接中...`);
+        showInfo(`即将启动网卡 [${selectedInterface.name}] 的实时抓包功能`);
     }
+    
+    onMount(() => {
+        // 监听来自侧边栏的导航事件
+        function handleNavigate(event: CustomEvent) {
+            const view = event.detail as string;
+            if (view) {
+                navigateTo(view);
+            }
+        }
+        
+        window.addEventListener('navigate' as any, handleNavigate as any);
+        
+        return () => {
+            window.removeEventListener('navigate' as any, handleNavigate as any);
+        };
+    });
 </script>
 
 <div class="hub-container">
@@ -72,10 +87,13 @@
                     <span class="title">离线流量包列表</span>
                 {:else if currentView === 'pcap-detail'}
                     <button class="back-btn" on:click={() => navigateTo('pcap-list')}>← 返回文件列表</button>
-                    <span class="title">正在分析: <strong class="highlight">{selectedFile?.fileName}</strong></span>
+                    <span class="title">正在分析：<strong class="highlight">{selectedFile?.fileName}</strong></span>
                 {:else if currentView === 'live'}
                     <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
                     <span class="title">网卡列表</span>
+                {:else if currentView === 'profile'}
+                    <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
+                    <span class="title">个人中心</span>
                 {:else}
                     <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
                 {/if}
@@ -88,6 +106,8 @@
                     <PcapDetail file={selectedFile}/>
                 {:else if currentView === 'live'}
                     <InterfaceList on:capture={handleStartCapture} />
+                {:else if currentView === 'profile'}
+                    <Profile />
                 {:else}
                     <div class="wip"><h2>模块正在开发接入中...</h2></div>
                 {/if}

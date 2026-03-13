@@ -1,16 +1,16 @@
 <script lang="ts">
     import { createEventDispatcher, onMount } from 'svelte';
-    import { GetInterfaces } from '../../../wailsjs/go/main/App';
+    import { GetInterfaces } from '../../../../wailsjs/go/main/App';
+    import { error as showError } from '../../../stores/toast';
 
     const dispatch = createEventDispatcher();
 
     let interfaces: any[] = [];
     let isLoading = false;
-    let searchName = "";
+    let searchName = '';
 
-    // Derived store for filtering
     $: filteredInterfaces = interfaces.filter(iface =>
-        searchName === "" ||
+        searchName === '' ||
         iface.name.toLowerCase().includes(searchName.toLowerCase()) ||
         (iface.description && iface.description.toLowerCase().includes(searchName.toLowerCase()))
     );
@@ -19,19 +19,15 @@
         await refreshInterfaces();
     });
 
-    // Fetch interfaces from the Gin API
     async function refreshInterfaces() {
         isLoading = true;
         try {
             const resStr = await GetInterfaces();
             const resData = JSON.parse(resStr);
-
-            // 提取网卡列表数据
             interfaces = resData.list || [];
-
         } catch (err) {
-            console.error("获取网卡列表失败:", err);
-            alert("获取网卡列表失败: " + err);
+            console.error('获取网卡列表失败:', err);
+            showError('获取网卡列表失败：' + err);
         } finally {
             isLoading = false;
         }
@@ -43,7 +39,7 @@
     }
 
     function handleReset() {
-        searchName = "";
+        searchName = '';
     }
 
     function handleStartCapture(iface: any) {

@@ -6,6 +6,14 @@ export function BatchDeleteFiles(arg1) {
   return window['go']['main']['App']['BatchDeleteFiles'](arg1);
 }
 
+export function ChangePassword(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ChangePassword'](arg1, arg2, arg3);
+}
+
+export function CheckPermission(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CheckPermission'](arg1, arg2, arg3);
+}
+
 export function DeleteFile(arg1) {
   return window['go']['main']['App']['DeleteFile'](arg1);
 }
@@ -16,6 +24,10 @@ export function FollowStream(arg1, arg2, arg3) {
 
 export function GetAllFrames(arg1, arg2) {
   return window['go']['main']['App']['GetAllFrames'](arg1, arg2);
+}
+
+export function GetCurrentUser(arg1) {
+  return window['go']['main']['App']['GetCurrentUser'](arg1);
 }
 
 export function GetFileList(arg1) {
@@ -48,4 +60,12 @@ export function ImportFromPaths(arg1) {
 
 export function ImportPcapsDialog() {
   return window['go']['main']['App']['ImportPcapsDialog']();
+}
+
+export function Login(arg1, arg2) {
+  return window['go']['main']['App']['Login'](arg1, arg2);
+}
+
+export function ValidateToken(arg1) {
+  return window['go']['main']['App']['ValidateToken'](arg1);
 }

@@ -1,0 +1,85 @@
+# NEBULA 配置文件示例
+# 复制此文件为 config.yaml 并根据实际环境修改配置
+
+# 应用配置
+app:
+  name: "NEBULA"
+  version: "1.0.0"
+  debug: false
+
+# Wireshark HTTP 服务配置
+wireshark:
+  # Wireshark HTTP API 基础 URL
+  # 开发环境默认值：http://127.0.0.1:18090/api/v1
+  # 生产环境请根据实际部署地址修改
+  base_url: "http://127.0.0.1:18090/api/v1"
+  # 容器挂载路径（Docker 容器内 PCAP 文件路径）
+  # 使用 Docker 部署时，需与 docker run -v 参数一致
+  container_mount_path: "/app/pcaps/"
+  # HTTP 请求超时时间（秒）
+  timeout: 60
+
+# 数据库配置
+database:
+  # 数据库类型：sqlite, mysql, postgres
+  type: "sqlite"
+  # SQLite 数据库文件路径
+  sqlite_path: "./nebula.db"
+  # MySQL 配置（如果使用 MySQL）
+  # mysql:
+  #   host: "localhost"
+  #   port: 3306
+  #   username: "root"
+  #   password: ""
+  #   database: "nebula"
+  # 连接池配置
+  max_open_conns: 100
+  max_idle_conns: 10
+  conn_max_lifetime: 3600
+
+# JWT 认证配置
+auth:
+  # JWT 密钥（生产环境请修改为随机字符串）
+  # 可使用以下命令生成随机字符串：
+  # openssl rand -base64 32
+  secret_key: "nebula-secret-key-change-in-production"
+  # Token 过期时间（小时）
+  token_expiry: 24
+  # 刷新 Token 过期时间（小时）
+  refresh_token_expiry: 168
+
+# 日志配置
+log:
+  # 日志级别：debug, info, warn, error
+  level: "info"
+  # 日志格式：json, text
+  format: "text"
+  # 日志文件路径（空则输出到 stdout）
+  file_path: ""
+  # 日志文件最大大小（MB）
+  max_size: 100
+  # 日志文件保留天数
+  max_age: 30
+
+# PCAP 文件存储配置
+pcap:
+  # PCAP 文件存储目录
+  storage_path: "./pcaps"
+  # 允许上传的最大文件大小（MB）
+  max_upload_size: 500
+  # 支持的文件扩展名
+  allowed_extensions:
+    - ".pcap"
+    - ".pcapng"
+    - ".cap"
+
+# 服务器配置
+server:
+  # HTTP 服务器监听地址
+  host: "0.0.0.0"
+  # HTTP 服务器监听端口
+  port: 8080
+  # 读取超时（秒）
+  read_timeout: 30
+  # 写入超时（秒）
+  write_timeout: 30

@@ -1,25 +1,16 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    // 引入 Wails 绑定的后端方法
+    import { auth, app } from './stores';
+    import { showSuccess } from './utils';
+    import { ToastContainer } from './components/ui';
+    import { Sidebar } from './components/layout';
+    import Login from './auth/Login.svelte';
+    import Workspace from './features/workspace/Workspace.svelte';
     import { GetFileList, GetWiresharkVersion } from '../wailsjs/go/main/App';
-    // 引入 Analyzer Hub
-    import AnalyzerHub from './lib/AnalyzerHub.svelte';
-
-    let activeTab: 'home' | 'analyzer' | 'zeek' | 'ai' = 'home';
-
-    let status = {
-        cgo: "API Connected",
-        zeek: "Idle",
-        ai: "Ready"
-    };
-
-    const tabs = [
-        {id: 'home', label: '控制台', icon: '🏠'},
-        {id: 'analyzer', label: '协议分析引擎', icon: '🔍'},
-        {id: 'zeek', label: 'Zeek 入侵检测', icon: '🛡️'},
-        {id: 'ai', label: 'Dify 智能诊断', icon: '🧠'}
-    ];
-
+    
+    let isAuthenticated = false;
+    let activeTab = 'home';
+    
     // ==== 大屏统计状态 ====
     let dashStats = {
         pcapCount: 0,
@@ -30,8 +21,25 @@
         aiTokens: "1.2M",
         systemUptime: "0 Days"
     };
-
+    
+    // 监听认证状态
+    auth.subscribe(state => {
+        isAuthenticated = state.isAuthenticated;
+    });
+    
+    // 监听标签页切换
+    app.subscribe(state => {
+        activeTab = state.activeTab;
+    });
+    
     onMount(async () => {
+        // 如果已登录，加载数据
+        if (isAuthenticated) {
+            await loadDashboardData();
+        }
+    });
+    
+    async function loadDashboardData() {
         // 1. 获取 PCAP 文件总数
         try {
             const pcapResp = await GetFileList({ page: 1, pageSize: 1 });
@@ -47,39 +55,34 @@
             dashStats.wsVersion = wsObj.version || "版本未知";
         } catch(e) {
             dashStats.wsVersion = "引擎离线";
-            console.error("大屏获取Wireshark版本失败:", e);
+            console.error("大屏获取 Wireshark 版本失败:", e);
         }
-    });
-
+    }
+    
+    function handleLoginSuccess() {
+        showSuccess('欢迎回来！');
+        loadDashboardData();
+    }
+    
+    function handleTabChange(event: CustomEvent) {
+        activeTab = event.detail;
+        if (activeTab === 'home') {
+            loadDashboardData();
+        }
+    }
 </script>
 
-<div id="app-container">
-    <aside class="sidebar">
-        <div class="brand">NEBULA</div>
-        <nav>
-            {#each tabs as tab}
-                <button
-                        class:active={activeTab === tab.id}
-                        on:click={() => activeTab = tab.id}
-                >
-                    <span class="icon">{tab.icon}</span>
-                    <span class="label">{tab.label}</span>
-                </button>
-            {/each}
-        </nav>
-        <div class="sys-status">
-            <div class="status-item">Engine: <span class="online">{status.cgo}</span></div>
-        </div>
-    </aside>
-
-    <main class="content-area">
-        <header>
-            <h2>{tabs.find(t => t.id === activeTab)?.label}</h2>
-        </header>
-
-        <section class="viewport">
+<div id="app-wrapper">
+    <ToastContainer />
+    
+    {#if !isAuthenticated}
+        <!-- 登录页面 -->
+        <Login on:success={handleLoginSuccess} />
+    {:else}
+        <!-- 主应用布局 -->
+        <Sidebar on:tabChange={handleTabChange}>
             {#if activeTab === 'home'}
-
+                <!-- 控制台首页 -->
                 <div class="dashboard-container">
                     <div class="dash-header">
                         <div class="title-group">
@@ -113,7 +116,7 @@
                             <div class="card-content">
                                 <div class="card-label">Zeek 威胁感知引擎</div>
                                 <div class="card-value">{dashStats.zeekVersion}</div>
-                                <div class="card-sub">已加载特征脚本: <span class="highlight">{dashStats.zeekScripts}</span> 个</div>
+                                <div class="card-sub">已加载特征脚本：<span class="highlight">{dashStats.zeekScripts}</span> 个</div>
                             </div>
                         </div>
 
@@ -130,54 +133,52 @@
                     <div class="dash-banner">
                         <div class="banner-text">
                             <h3>🚀 工作站全模块已就绪</h3>
-                            <p>点击左侧菜单栏进入 <strong>“协议分析引擎”</strong>，开启对底层流量的深度透视与多维检索之旅。</p>
+                            <p>点击左侧菜单栏进入 <strong>"协议分析引擎"</strong>，开启对底层流量的深度透视与多维检索之旅。</p>
                         </div>
-                        <button class="start-btn" on:click={() => activeTab = 'analyzer'}>立即开始分析 ➔</button>
+                        <button class="start-btn" on:click={() => app.setActiveTab('analyzer')}>立即开始分析 ➔</button>
                     </div>
                 </div>
             {:else if activeTab === 'analyzer'}
-                <AnalyzerHub/>
+                <!-- 协议分析引擎 -->
+                <Workspace />
             {:else if activeTab === 'zeek'}
-                <div class="module-placeholder">Zeek-Runner 规则下发与实时日志分析引擎 (开发中...)</div>
+                <!-- Zeek 入侵检测（待开发） -->
+                <div class="module-placeholder">
+                    <div class="placeholder-content">
+                        <span class="placeholder-icon">🛡️</span>
+                        <h3>Zeek-Runner 规则下发与实时日志分析引擎</h3>
+                        <p>功能开发中...</p>
+                    </div>
+                </div>
             {:else if activeTab === 'ai'}
-                <div class="module-placeholder">Dify Agent 交互面板：选中流量自动发送 AI 诊断 (开发中...)</div>
+                <!-- Dify 智能诊断（待开发） -->
+                <div class="module-placeholder">
+                    <div class="placeholder-content">
+                        <span class="placeholder-icon">🧠</span>
+                        <h3>Dify Agent 交互面板</h3>
+                        <p>选中流量自动发送 AI 诊断，功能开发中...</p>
+                    </div>
+                </div>
             {/if}
-        </section>
-    </main>
+        </Sidebar>
+    {/if}
 </div>
 
 <style>
     :global(body) {
         margin: 0;
-        font-family: 'Inter', system-ui, sans-serif;
-        background-color: #0f172a;
-        color: white;
+        font-family: var(--font-family);
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
         overflow: hidden;
     }
-
-    #app-container {
-        display: flex;
+    
+    #app-wrapper {
         height: 100vh;
         width: 100vw;
     }
-
-    /* 侧边栏及原有布局样式保持不变 */
-    .sidebar { width: 180px; background: #0b1120; display: flex; flex-direction: column; border-right: 1px solid #1e293b; }
-    .brand { padding: 1.5rem; font-size: 1.2rem; font-weight: 800; letter-spacing: 2px; color: #6366f1; border-bottom: 1px solid #1e293b; }
-    nav { flex: 1; padding: 1rem 0.5rem; }
-    nav button { width: 100%; padding: 10px 12px; margin-bottom: 8px; border: none; background: transparent; color: #94a3b8; text-align: left; cursor: pointer; border-radius: 6px; transition: 0.2s; display: flex; align-items: center; font-size: 0.9rem; }
-    nav button:hover { background: #1e293b; color: white; }
-    nav button.active { background: #4f46e5; color: white; font-weight: bold; }
-    .icon { margin-right: 10px; font-size: 1.1rem; }
-    .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; }
-    header { padding: 1rem 1.5rem; background: #0b1120; border-bottom: 1px solid #1e293b; }
-    header h2 { margin: 0; font-size: 1.1rem; color: #f8fafc; }
-    .viewport { flex: 1; padding: 1.5rem; overflow: hidden; display: flex; flex-direction: column; }
-    .module-placeholder { border: 2px dashed #334155; height: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.95rem; }
-    .online { color: #10b981; font-weight: bold; }
-    .sys-status { padding: 1rem; font-size: 0.75rem; background: #05080f; border-top: 1px solid #1e293b; }
-
-    /* ================= 新增的大屏专属样式 ================= */
+    
+    /* 控制台首页样式 */
     .dashboard-container {
         display: flex;
         flex-direction: column;
@@ -185,115 +186,201 @@
         gap: 24px;
         animation: fadeIn 0.5s ease-out;
     }
-
+    
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-
+    
     .dash-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
         padding-bottom: 16px;
-        border-bottom: 1px solid #1e293b;
+        border-bottom: 1px solid var(--border-color);
     }
-
-    .title-group h1 { margin: 0 0 8px 0; font-size: 1.8rem; color: #f8fafc; letter-spacing: 1px;}
-    .title-group p { margin: 0; color: #64748b; font-size: 0.9rem; font-family: monospace;}
-
+    
+    .title-group h1 {
+        margin: 0 0 8px 0;
+        font-size: var(--font-2xl);
+        background: linear-gradient(135deg, #4f46e5, #10b981);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .title-group p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: var(--font-sm);
+    }
+    
     .live-badge {
         display: flex;
         align-items: center;
         gap: 8px;
-        background: rgba(16, 185, 129, 0.1);
-        border: 1px solid rgba(16, 185, 129, 0.2);
-        color: #10b981;
         padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: bold;
-        font-family: monospace;
+        background: var(--color-success-light);
+        color: var(--color-success);
+        border-radius: var(--radius-full);
+        font-size: var(--font-xs);
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }
-    .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; animation: pulse 1.5s infinite;}
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-
+    
+    .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--color-success);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
     .dash-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 20px;
     }
-
+    
     .dash-card {
-        background: linear-gradient(145deg, #111827 0%, #0b1120 100%);
-        border: 1px solid #1e293b;
-        border-radius: 12px;
-        padding: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
         display: flex;
-        align-items: flex-start;
-        gap: 16px;
-        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        gap: var(--spacing-lg);
+        align-items: center;
+        transition: var(--transition-base);
     }
-
+    
     .dash-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-        border-color: #334155;
+        border-color: var(--border-color-light);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
     }
-
+    
     .card-icon {
-        font-size: 2.2rem;
-        padding: 12px;
-        border-radius: 12px;
-        background: #1e293b;
+        font-size: 3rem;
+        flex-shrink: 0;
     }
-
-    /* 不同卡片的专属渐变底色 */
-    .pcap-icon { background: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0.05) 100%); color: #818cf8; }
-    .ws-icon { background: linear-gradient(135deg, rgba(56,189,248,0.2) 0%, rgba(56,189,248,0.05) 100%); color: #38bdf8; }
-    .zeek-icon { background: linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(245,158,11,0.05) 100%); color: #fbbf24; }
-    .ai-icon { background: linear-gradient(135deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.05) 100%); color: #c084fc; }
-
-    .card-content { display: flex; flex-direction: column; }
-    .card-label { color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .card-value { color: #f8fafc; font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; font-family: 'Fira Code', monospace;}
-    .card-value .unit { font-size: 0.9rem; color: #64748b; font-weight: normal; }
-    .text-glow { text-shadow: 0 0 10px rgba(56,189,248, 0.4); color: #38bdf8;}
-
-    .card-sub { color: #64748b; font-size: 0.8rem; }
-    .highlight { color: #e2e8f0; font-weight: bold; }
-
+    
+    .card-content {
+        flex: 1;
+    }
+    
+    .card-label {
+        color: var(--text-secondary);
+        font-size: var(--font-xs);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .card-value {
+        font-size: var(--font-2xl);
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+    
+    .card-value.text-glow {
+        text-shadow: 0 0 20px rgba(79, 70, 229, 0.5);
+    }
+    
+    .card-value .unit {
+        font-size: var(--font-sm);
+        font-weight: 400;
+        color: var(--text-muted);
+        margin-left: 4px;
+    }
+    
+    .card-sub {
+        color: var(--text-muted);
+        font-size: var(--font-xs);
+    }
+    
+    .card-sub .highlight {
+        color: var(--color-info);
+        font-weight: 600;
+    }
+    
     .dash-banner {
-        margin-top: auto;
-        background: linear-gradient(90deg, rgba(79, 70, 229, 0.1) 0%, rgba(15, 23, 42, 0) 100%);
-        border: 1px solid #334155;
-        border-left: 4px solid #4f46e5;
-        border-radius: 8px;
-        padding: 20px 24px;
+        background: linear-gradient(135deg, var(--color-primary-light), var(--color-info-light));
+        border: 1px solid var(--border-color-light);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        margin-top: auto;
     }
-
-    .banner-text h3 { margin: 0 0 8px 0; color: #f1f5f9; font-size: 1.1rem; }
-    .banner-text p { margin: 0; color: #94a3b8; font-size: 0.9rem; }
-
+    
+    .banner-text h3 {
+        margin: 0 0 8px 0;
+        color: var(--text-primary);
+        font-size: var(--font-lg);
+    }
+    
+    .banner-text p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: var(--font-sm);
+    }
+    
     .start-btn {
-        background: #4f46e5;
+        padding: 12px 24px;
+        background: var(--color-primary);
         color: white;
         border: none;
-        padding: 12px 24px;
-        border-radius: 6px;
-        font-size: 0.95rem;
-        font-weight: bold;
+        border-radius: var(--radius-md);
+        font-weight: 600;
         cursor: pointer;
-        transition: 0.2s;
-        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+        transition: var(--transition-base);
+        white-space: nowrap;
     }
+    
     .start-btn:hover {
-        background: #4338ca;
+        background: var(--color-primary-hover);
         transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(79, 70, 229, 0.3);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* 模块占位符样式 */
+    .module-placeholder {
+        border: 2px dashed var(--border-color-light);
+        height: 100%;
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-secondary);
+    }
+    
+    .placeholder-content {
+        text-align: center;
+        color: var(--text-secondary);
+    }
+    
+    .placeholder-icon {
+        font-size: 4rem;
+        display: block;
+        margin-bottom: var(--spacing-lg);
+        opacity: 0.5;
+    }
+    
+    .placeholder-content h3 {
+        margin: 0 0 var(--spacing-md) 0;
+        color: var(--text-primary);
+        font-size: var(--font-xl);
+    }
+    
+    .placeholder-content p {
+        margin: 0;
+        font-size: var(--font-sm);
     }
 </style>

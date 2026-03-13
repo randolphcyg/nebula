@@ -6,4 +6,17 @@ frontend/dist
 .idea/
 build/
 
+# 配置文件（包含敏感信息）
+config.yaml
+*.db
+
+# 日志文件
+*.log
+logs/
+
+# PCAP 文件
+pcaps/
+*.pcap
+*.pcapng
+
 

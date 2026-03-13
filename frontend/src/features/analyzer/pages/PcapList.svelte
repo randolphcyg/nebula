@@ -1,19 +1,26 @@
 <script lang="ts">
-    import {createEventDispatcher, onDestroy, onMount} from 'svelte';
-    import {EventsOff, EventsOn, OnFileDrop, OnFileDropOff} from '../../../wailsjs/runtime/runtime';
+    import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+    import { EventsOff, EventsOn, OnFileDrop, OnFileDropOff } from '../../../../wailsjs/runtime/runtime';
     import {
         BatchDeleteFiles,
         DeleteFile,
         GetFileList,
         ImportFromPaths,
         ImportPcapsDialog
-    } from '../../../wailsjs/go/main/App';
+    } from '../../../../wailsjs/go/main/App';
+    import { error as showError, success as showSuccess, warning as showWarning } from '../../../stores/toast';
+    import { debounce } from '../../../utils/helpers';
 
     const dispatch = createEventDispatcher();
 
     let pcapFiles: any[] = [];
-    let searchFileName = "", searchFileSize = "", searchStartDate = "", searchEndDate = "";
-    let currentPage = 1, pageSize = 10, totalCount = 0;
+    let searchFileName = '';
+    let searchFileSize = '';
+    let searchStartDate = '';
+    let searchEndDate = '';
+    let currentPage = 1;
+    let pageSize = 10;
+    let totalCount = 0;
     $: totalPages = Math.ceil(totalCount / pageSize) || 1;
 
     let selectedIds: number[] = [];
@@ -22,26 +29,29 @@
     let uploadProgressMap: Record<string, { fileName: string; percent: number }> = {};
     let isDragging = false;
 
+    const debouncedRefresh = debounce(async () => {
+        currentPage = 1;
+        await refreshFileList();
+    }, 300);
+
     onMount(async () => {
         await refreshFileList();
 
         EventsOn("pcap:progress", (data: any) => {
-            // 在当前表格中精准查找到正在上传的这个文件
             const targetIndex = pcapFiles.findIndex(f => f.fileId === data.fileId);
 
             if (targetIndex !== -1) {
                 if (data.percent === -1) {
                     pcapFiles[targetIndex].status = "导入失败";
                     pcapFiles[targetIndex]._error = data.error;
-                    alert(`文件 [${data.fileName}] 导入失败：\n${data.error}`);
+                    showError(`文件 [${data.fileName}] 导入失败：${data.error}`);
                 } else if (data.percent === 100) {
                     pcapFiles[targetIndex].status = "导入成功";
                     pcapFiles[targetIndex]._progress = undefined;
                 } else {
                     pcapFiles[targetIndex].status = "导入中";
-                    pcapFiles[targetIndex]._progress = data.percent; // 注入实时进度
+                    pcapFiles[targetIndex]._progress = data.percent;
                 }
-                // 触发 Svelte 数组的局部响应式更新，无需发起后端网络请求！
                 pcapFiles = [...pcapFiles];
             }
         });
@@ -53,19 +63,18 @@
             isProcessingDrop = true;
             const validPaths = paths.filter(p => p.endsWith('.pcap') || p.endsWith('.pcapng'));
             if (validPaths.length === 0) {
-                alert("仅支持拖入 .pcap 或 .pcapng 流量包！");
+                showWarning("仅支持拖入 .pcap 或 .pcapng 流量包！");
                 isProcessingDrop = false;
                 return;
             }
 
             ImportFromPaths(validPaths).then((newFiles) => {
-                // 极速响应！直接把后端刚插入的记录塞进当前表格最前面
                 if (newFiles && newFiles.length > 0) {
                     pcapFiles = [...newFiles, ...pcapFiles];
                 }
                 isProcessingDrop = false;
             }).catch(err => {
-                alert("拖拽导入失败: " + err);
+                showError("拖拽导入失败：" + err);
                 isProcessingDrop = false;
             });
         }, false);
@@ -96,7 +105,7 @@
             await ImportPcapsDialog();
             await refreshFileList();
         } catch (err) {
-            alert("导入失败：" + err);
+            showError("导入失败：" + err);
         }
     }
 
@@ -152,7 +161,7 @@
             selectedIds = [];
             await refreshFileList();
         } catch (err) {
-            alert("批量删除失败: " + err);
+            showError("批量删除失败: " + err);
         }
     }
 
@@ -204,7 +213,7 @@
     <div class="filter-panel">
         <div class="filter-group"><label for="sName">文件名:</label><input id="sName" type="text"
                                                                            bind:value={searchFileName}
-                                                                           on:keyup={(e) => e.key === 'Enter' && handleSearch()}
+                                                                           on:input={debouncedRefresh}
                                                                            placeholder="搜文件名"/></div>
         <div class="filter-group"><label for="sSize">大小:</label><input id="sSize" type="text"
                                                                              bind:value={searchFileSize}

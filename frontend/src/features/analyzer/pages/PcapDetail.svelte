@@ -1,27 +1,26 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { GetPacketDetail, GetPacketsByPage, GetPacketHex, GetAllFrames, FollowStream } from '../../../wailsjs/go/main/App';
-    import JsonTree from './JsonTree.svelte';
-    import StreamModal from './StreamModal.svelte';
+    import { GetPacketDetail, GetPacketsByPage, GetPacketHex, GetAllFrames, FollowStream } from '../../../../wailsjs/go/main/App';
+    import JsonTree from '../components/JsonTree.svelte';
+    import StreamModal from '../components/StreamModal.svelte';
+    import { success as showSuccess } from '../../../stores/toast';
 
     export let file: any;
 
-    // ==== 核心状态 ====
     let isLoadingData = false;
     let packets: any[] = [];
     let selectedDetail: any = null;
     let selectedRowIndex: number | null = null;
     $: selectedPacket = packets.find(p => p.index === selectedRowIndex);
 
-    // ==== 过滤与分页状态 (✨ 核心修改区) ====
-    let globalFilter = "";
+    let globalFilter = '';
     let packetPage = 1;
-    let packetPageSize = 10; // 默认调整为 10，更适合上下翻页体验
-    let hasMore = true;      // 新增：判断是否有下一页
+    let packetPageSize = 10;
+    let hasMore = true;
 
-    let filterProtocol = "";
-    let filterIp = "";
-    let filterInfo = "";
+    let filterProtocol = '';
+    let filterIp = '';
+    let filterInfo = '';
 
     $: filteredPackets = packets.filter(p => {
         const matchProto = filterProtocol === "" || p.protocol.toLowerCase().includes(filterProtocol.toLowerCase());
@@ -77,9 +76,9 @@
         if (!text) return;
         try {
             await navigator.clipboard.writeText(text);
-            alert("地址已复制到剪贴板"); // 或者使用更美观的 Toast 提示
+            showSuccess('已复制到剪贴板');
         } catch (err) {
-            console.error("无法复制:", err);
+            console.error('无法复制:', err);
         }
     }
 
@@ -90,11 +89,9 @@
         streamCurrentId = streamId;
         streamCurrentProto = protocol;
 
-        // 1. 触发底层列表过滤
         globalFilter = `${protocol}.stream == ${streamId}`;
         applyGlobalFilter();
 
-        // 2. 呼出追踪流模态框
         const safeFileName = file && file.fileName ? file.fileName : 'Unknown File';
         streamModalTitle = `Follow ${protocol.toUpperCase()} Stream (${streamId})  |  Filter: ${globalFilter}  |  File: ${safeFileName}`;
 
@@ -102,9 +99,8 @@
         isStreamLoading = true;
         streamPayloads = [];
 
-        // 3. 重置统计元数据
-        streamClientNode = "Client";
-        streamServerNode = "Server";
+        streamClientNode = 'Client';
+        streamServerNode = 'Server';
         streamClientBytes = 0;
         streamServerBytes = 0;
         streamPacketCount = 0;
@@ -114,18 +110,18 @@
             const streamData = JSON.parse(resStr);
 
             if (streamData) {
-                streamClientNode = streamData.clientNode || "Client";
-                streamServerNode = streamData.serverNode || "Server";
+                streamClientNode = streamData.clientNode || 'Client';
+                streamServerNode = streamData.serverNode || 'Server';
                 streamClientBytes = streamData.clientBytes || 0;
                 streamServerBytes = streamData.serverBytes || 0;
                 streamPacketCount = streamData.packetCount || 0;
-                streamPayloads = streamData.payloads || [{ dir: 'client', hexData: "" }];
+                streamPayloads = streamData.payloads || [{ dir: 'client', hexData: '' }];
             } else {
-                streamPayloads = [{ dir: 'client', hexData: "" }];
+                streamPayloads = [{ dir: 'client', hexData: '' }];
             }
         } catch (err) {
-            console.error("Failed to load stream data:", err);
-            streamPayloads = [{ dir: 'client', hexData: "" }];
+            console.error('Failed to load stream data:', err);
+            streamPayloads = [{ dir: 'client', hexData: '' }];
         } finally {
             isStreamLoading = false;
         }

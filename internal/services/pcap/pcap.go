@@ -9,45 +9,15 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"nebula/internal/database"
 	"nebula/internal/models"
 	"nebula/internal/utils"
 )
 
-type Service struct {
-	ctx       context.Context
-	db        *gorm.DB
-	workspace string
-}
+// ================= 请求和响应数据结构 =================
 
-func NewService() *Service {
-	return &Service{}
-}
-
-func (s *Service) Start(ctx context.Context) error {
-	s.ctx = ctx
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("获取用户目录失败: %v", err)
-	}
-
-	s.workspace = filepath.Join(homeDir, ".nebula", "data", "pcaps")
-	os.MkdirAll(s.workspace, os.ModePerm)
-
-	dbPath := filepath.Join(homeDir, ".nebula", "nebula.db")
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
-	if err != nil {
-		return fmt.Errorf("连接数据库失败: %v", err)
-	}
-
-	db.AutoMigrate(&models.PcapFile{})
-	s.db = db
-	return nil
-}
-
-// ================= 分页与多条件查询 DTO =================
 type FileQueryReq struct {
 	FileName  string `json:"fileName"`
 	FileSize  string `json:"fileSize"`
@@ -62,7 +32,7 @@ type FileQueryResp struct {
 	Total int64             `json:"total"`
 }
 
-// ===================================================
+// ================= 进度读取器 =================
 
 type ProgressReader struct {
 	Reader     io.Reader
@@ -87,6 +57,42 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 		}
 	}
 	return n, err
+}
+
+type Service struct {
+	ctx       context.Context
+	db        *gorm.DB
+	workspace string
+}
+
+func NewService() *Service {
+	return &Service{}
+}
+
+func (s *Service) Start(ctx context.Context, dbService interface{}) error {
+	s.ctx = ctx
+
+	switch svc := dbService.(type) {
+	case *database.Database:
+		s.db = svc.GetDB()
+	case *gorm.DB:
+		s.db = svc
+	default:
+		return fmt.Errorf("无效的数据库服务类型")
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("获取用户目录失败：%v", err)
+	}
+	s.workspace = filepath.Join(homeDir, ".nebula", "data", "pcaps")
+	os.MkdirAll(s.workspace, os.ModePerm)
+
+	if err := s.db.AutoMigrate(&models.PcapFile{}); err != nil {
+		return fmt.Errorf("数据库迁移失败：%v", err)
+	}
+
+	return nil
 }
 
 func (s *Service) ImportPcapsDialog() ([]models.PcapFile, error) {
@@ -124,31 +130,25 @@ func (s *Service) ImportFromPaths(paths []string) ([]models.PcapFile, error) {
 			FileName: fileName,
 			FilePath: destPath,
 			FileSize: formatFileSize(fileInfo.Size()),
-			Status:   "导入中", // 初始化状态
+			Status:   "导入中",
 		}
 		s.db.Create(&pcapFile)
 
 		if fileInfo.Size() == 0 {
-			// 直接修改当前内存对象的属性，确保一会儿返回给前端的是 "导入失败"
 			pcapFile.Status = "导入失败"
-			// 同步更新数据库
 			s.db.Model(&models.PcapFile{}).Where("file_id = ?", fileID).Update("status", "导入失败")
 
-			// 发送错误事件供弹窗提醒
 			runtime.EventsEmit(s.ctx, "pcap:progress", map[string]interface{}{
 				"fileId": fileID, "percent": -1, "fileName": fileName, "error": "无效的流量包 (0 字节)",
 			})
 
-			// 【关键】：必须加进返回列表，让前端能渲染出这行失败的数据
 			importedFiles = append(importedFiles, pcapFile)
 			continue
 		}
 
 		importedFiles = append(importedFiles, pcapFile)
 
-		// 异步执行物理拷贝，不阻塞主线程和其他文件的入库
 		go func(src, dst string, size int64, fId string, fName string) {
-			// 发送 0% 进度
 			runtime.EventsEmit(s.ctx, "pcap:progress", map[string]interface{}{
 				"fileId": fId, "percent": 0, "fileName": fName,
 			})
@@ -156,7 +156,6 @@ func (s *Service) ImportFromPaths(paths []string) ([]models.PcapFile, error) {
 			err := s.copyWithProgress(src, dst, size, fId)
 
 			if err != nil {
-				// 拷贝失败：更新数据库状态，并通知前端
 				s.db.Model(&models.PcapFile{}).Where("file_id = ?", fId).Update("status", "导入失败")
 				runtime.EventsEmit(s.ctx, "pcap:progress", map[string]interface{}{
 					"fileId": fId, "percent": -1, "fileName": fName, "error": err.Error(),
@@ -164,7 +163,6 @@ func (s *Service) ImportFromPaths(paths []string) ([]models.PcapFile, error) {
 				return
 			}
 
-			// 拷贝成功：更新数据库状态为导入成功，并通知前端 100%
 			s.db.Model(&models.PcapFile{}).Where("file_id = ?", fId).Update("status", "导入成功")
 			runtime.EventsEmit(s.ctx, "pcap:progress", map[string]interface{}{
 				"fileId": fId, "percent": 100, "fileName": fName,
@@ -206,7 +204,6 @@ func formatFileSize(bytes int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// GetFileList 获取文件列表 (支持多条件组合筛选)
 func (s *Service) GetFileList(req FileQueryReq) (*FileQueryResp, error) {
 	if req.Page < 1 {
 		req.Page = 1
@@ -220,17 +217,14 @@ func (s *Service) GetFileList(req FileQueryReq) (*FileQueryResp, error) {
 
 	query := s.db.Model(&models.PcapFile{})
 
-	// 1. 按文件名模糊查询
 	if req.FileName != "" {
 		query = query.Where("file_name LIKE ?", "%"+req.FileName+"%")
 	}
 
-	// 2. 按文件大小模糊查询 (例如输入 "MB" 或 "1.2")
 	if req.FileSize != "" {
 		query = query.Where("file_size LIKE ?", "%"+req.FileSize+"%")
 	}
 
-	// 3. 按上传时间范围查询
 	if req.StartDate != "" {
 		query = query.Where("created_at >= ?", req.StartDate+" 00:00:00")
 	}
@@ -238,10 +232,8 @@ func (s *Service) GetFileList(req FileQueryReq) (*FileQueryResp, error) {
 		query = query.Where("created_at <= ?", req.EndDate+" 23:59:59")
 	}
 
-	// 统计总数 (满足上述条件)
 	query.Count(&total)
 
-	// 分页查询
 	offset := (req.Page - 1) * req.PageSize
 	if err := query.Order("created_at desc").Limit(req.PageSize).Offset(offset).Find(&files).Error; err != nil {
 		return nil, err
@@ -265,16 +257,13 @@ func (s *Service) BatchDeleteFiles(ids []uint) error {
 	}
 
 	var files []models.PcapFile
-	// 先查出所有要删除的文件，为了获取物理路径
 	if err := s.db.Where("id IN ?", ids).Find(&files).Error; err != nil {
 		return err
 	}
 
-	// 遍历删除底层的物理文件
 	for _, file := range files {
 		_ = os.Remove(file.FilePath)
 	}
 
-	// 批量从 SQLite 数据库中删除记录
 	return s.db.Delete(&models.PcapFile{}, ids).Error
 }

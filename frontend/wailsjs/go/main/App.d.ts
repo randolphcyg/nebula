@@ -5,11 +5,17 @@ import {models} from '../models';
 
 export function BatchDeleteFiles(arg1:Array<number>):Promise<void>;
 
+export function ChangePassword(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function CheckPermission(arg1:string,arg2:string,arg3:string):Promise<boolean>;
+
 export function DeleteFile(arg1:number):Promise<void>;
 
 export function FollowStream(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function GetAllFrames(arg1:string,arg2:string):Promise<string>;
+
+export function GetCurrentUser(arg1:string):Promise<Record<string, any>>;
 
 export function GetFileList(arg1:pcap.FileQueryReq):Promise<pcap.FileQueryResp>;
 
@@ -26,3 +32,7 @@ export function GetWiresharkVersion():Promise<string>;
 export function ImportFromPaths(arg1:Array<string>):Promise<Array<models.PcapFile>>;
 
 export function ImportPcapsDialog():Promise<Array<models.PcapFile>>;
+
+export function Login(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function ValidateToken(arg1:string):Promise<Record<string, any>>;
