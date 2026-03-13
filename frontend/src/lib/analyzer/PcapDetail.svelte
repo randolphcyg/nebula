@@ -72,6 +72,16 @@
         applyGlobalFilter();
     }
 
+    async function copyToClipboard(text: string) {
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            alert("地址已复制到剪贴板"); // 或者使用更美观的 Toast 提示
+        } catch (err) {
+            console.error("无法复制:", err);
+        }
+    }
+
     // ==== 极速追踪流与重组逻辑 ====
     async function followStream(streamId: number, protocol: string) {
         if (streamId === null || streamId === undefined || isNaN(streamId)) return;
@@ -247,7 +257,14 @@
         <div class="info-grid">
             <div class="info-item">
                 <span class="label">正在分析文件</span>
-                <span class="value highlight-blue" title={file?.filePath}>{file?.fileName}</span>
+                <span
+                        class="value highlight-blue"
+                        style="cursor: pointer;"
+                        title={file?.filePath}
+                        on:click={() => copyToClipboard(file?.filePath)}
+                >
+                    {file?.fileName}
+                </span>
             </div>
             <div class="info-item">
                 <span class="label">文件物理大小</span>
@@ -258,7 +275,7 @@
                 <span class="value">{formatDate(file?.createdAt)}</span>
             </div>
             <div class="info-item">
-                <span class="label">Engine 追踪 ID</span>
+                <span class="label">ID</span>
                 <span class="value sys-font">{file?.fileId}</span>
             </div>
         </div>

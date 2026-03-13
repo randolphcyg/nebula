@@ -61,7 +61,7 @@
             <div class="sub-header">
                 {#if currentView === 'pcap-list'}
                     <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
-                    <span class="title">PCAP 离线分析库</span>
+                    <span class="title">离线流量分析</span>
                 {:else if currentView === 'pcap-detail'}
                     <button class="back-btn" on:click={() => navigateTo('pcap-list')}>← 返回文件列表</button>
                     <span class="title">正在分析: <strong class="highlight">{selectedFile?.fileName}</strong></span>
