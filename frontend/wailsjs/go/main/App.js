@@ -6,6 +6,10 @@ export function BatchDeleteFiles(arg1) {
   return window['go']['main']['App']['BatchDeleteFiles'](arg1);
 }
 
+export function BatchUpdateUserStatus(arg1, arg2, arg3) {
+  return window['go']['main']['App']['BatchUpdateUserStatus'](arg1, arg2, arg3);
+}
+
 export function ChangePassword(arg1, arg2, arg3) {
   return window['go']['main']['App']['ChangePassword'](arg1, arg2, arg3);
 }
@@ -18,12 +22,24 @@ export function DeleteFile(arg1) {
   return window['go']['main']['App']['DeleteFile'](arg1);
 }
 
+export function DeleteUser(arg1, arg2) {
+  return window['go']['main']['App']['DeleteUser'](arg1, arg2);
+}
+
 export function FollowStream(arg1, arg2, arg3) {
   return window['go']['main']['App']['FollowStream'](arg1, arg2, arg3);
 }
 
 export function GetAllFrames(arg1, arg2) {
   return window['go']['main']['App']['GetAllFrames'](arg1, arg2);
+}
+
+export function GetAllRoles() {
+  return window['go']['main']['App']['GetAllRoles']();
+}
+
+export function GetAuditLogs(arg1) {
+  return window['go']['main']['App']['GetAuditLogs'](arg1);
 }
 
 export function GetCurrentUser(arg1) {
@@ -50,6 +66,14 @@ export function GetPacketsByPage(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['GetPacketsByPage'](arg1, arg2, arg3, arg4);
 }
 
+export function GetPublicKey() {
+  return window['go']['main']['App']['GetPublicKey']();
+}
+
+export function GetUsers() {
+  return window['go']['main']['App']['GetUsers']();
+}
+
 export function GetWiresharkVersion() {
   return window['go']['main']['App']['GetWiresharkVersion']();
 }
@@ -64,6 +88,26 @@ export function ImportPcapsDialog() {
 
 export function Login(arg1, arg2) {
   return window['go']['main']['App']['Login'](arg1, arg2);
+}
+
+export function Register(arg1, arg2, arg3) {
+  return window['go']['main']['App']['Register'](arg1, arg2, arg3);
+}
+
+export function SearchUsers(arg1) {
+  return window['go']['main']['App']['SearchUsers'](arg1);
+}
+
+export function UpdateUserProfile(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateUserProfile'](arg1, arg2, arg3);
+}
+
+export function UpdateUserRole(arg1, arg2) {
+  return window['go']['main']['App']['UpdateUserRole'](arg1, arg2);
+}
+
+export function UpdateUserStatus(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateUserStatus'](arg1, arg2, arg3);
 }
 
 export function ValidateToken(arg1) {

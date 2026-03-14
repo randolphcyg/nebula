@@ -1,23 +1,38 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { auth, app } from './stores';
+    import { preferencesStore } from './stores/preferences';
     import { showSuccess } from './utils';
+    import { logger } from './utils/logger';
     import { ToastContainer } from './components/ui';
     import { Sidebar } from './components/layout';
     import Login from './auth/Login.svelte';
+    import Register from './auth/Register.svelte';
     import Workspace from './features/workspace/Workspace.svelte';
+    import PcapList from './features/analyzer/pages/PcapList.svelte';
+    import UserManagement from './features/admin/pages/UserManagement.svelte';
     import { GetFileList, GetWiresharkVersion } from '../wailsjs/go/main/App';
     
     let isAuthenticated = false;
     let activeTab = 'home';
+    let showRegisterPage = false;
+    let user = null;
+    let compactMode = false;
+    
+    // 订阅紧凑模式
+    onMount(() => {
+        preferencesStore.subscribe(prefs => {
+            compactMode = prefs.compactMode;
+        });
+    });
     
     // ==== 大屏统计状态 ====
     let dashStats = {
         pcapCount: 0,
         wsVersion: "探测中...",
-        zeekVersion: "v8.1.0 (TODO)",
+        zeekVersion: "待检测",
         zeekScripts: 142,
-        aiModel: "qwen2.5-coder:3b (TODO)",
+        aiModel: "待配置",
         aiTokens: "1.2M",
         systemUptime: "0 Days"
     };
@@ -25,6 +40,7 @@
     // 监听认证状态
     auth.subscribe(state => {
         isAuthenticated = state.isAuthenticated;
+        user = state.user;
     });
     
     // 监听标签页切换
@@ -42,10 +58,10 @@
     async function loadDashboardData() {
         // 1. 获取 PCAP 文件总数
         try {
-            const pcapResp = await GetFileList({ page: 1, pageSize: 1 });
+            const pcapResp = await GetFileList({ fileName: '', fileSize: '', startDate: '', endDate: '', page: 1, pageSize: 1 });
             dashStats.pcapCount = pcapResp.total || 0;
         } catch(e) {
-            console.error("大屏获取文件数失败:", e);
+            logger.error("大屏获取文件数失败:", e);
         }
 
         // 2. 获取 wireshark 引擎版本
@@ -55,7 +71,7 @@
             dashStats.wsVersion = wsObj.version || "版本未知";
         } catch(e) {
             dashStats.wsVersion = "引擎离线";
-            console.error("大屏获取 Wireshark 版本失败:", e);
+            logger.error("大屏获取 Wireshark 版本失败:", e);
         }
     }
     
@@ -70,14 +86,28 @@
             loadDashboardData();
         }
     }
+
+    function handlePcapAnalyze(event: CustomEvent) {
+        const file = event.detail;
+        app.setActiveTab('analyzer');
+        // 触发 Workspace 的 analyze 事件
+        setTimeout(() => {
+            const workspaceEvent = new CustomEvent('analyze', { detail: file });
+            window.dispatchEvent(workspaceEvent);
+        }, 100);
+    }
 </script>
 
-<div id="app-wrapper">
+<div id="app-wrapper" class:compact={compactMode}>
     <ToastContainer />
     
     {#if !isAuthenticated}
-        <!-- 登录页面 -->
-        <Login on:success={handleLoginSuccess} />
+        <!-- 登录/注册页面 -->
+        {#if showRegisterPage}
+            <Register on:switchToLogin={() => showRegisterPage = false} />
+        {:else}
+            <Login on:success={handleLoginSuccess} on:showRegister={() => showRegisterPage = true} />
+        {/if}
     {:else}
         <!-- 主应用布局 -->
         <Sidebar on:tabChange={handleTabChange}>
@@ -93,7 +123,7 @@
                     </div>
 
                     <div class="dash-grid">
-                        <div class="dash-card">
+                        <div class="dash-card clickable" on:click={() => app.setActiveTab('pcapList')}>
                             <div class="card-icon pcap-icon">📦</div>
                             <div class="card-content">
                                 <div class="card-label">本地流量包沉淀</div>
@@ -138,9 +168,28 @@
                         <button class="start-btn" on:click={() => app.setActiveTab('analyzer')}>立即开始分析 ➔</button>
                     </div>
                 </div>
+            {:else if activeTab === 'pcapList'}
+                <!-- PCAP 流量包列表 -->
+                <PcapList on:analyze={handlePcapAnalyze} />
             {:else if activeTab === 'analyzer'}
                 <!-- 协议分析引擎 -->
                 <Workspace />
+            {:else if activeTab === 'profile'}
+                <!-- 个人中心 -->
+                <Workspace />
+            {:else if activeTab === 'users'}
+                <!-- 用户管理（管理员功能） -->
+                {#if user && user.roleCode === 'admin'}
+                    <UserManagement />
+                {:else}
+                    <div class="module-placeholder">
+                        <div class="placeholder-content">
+                            <span class="placeholder-icon">🔒</span>
+                            <h3>权限不足</h3>
+                            <p>只有超级管理员可以访问用户管理页面</p>
+                        </div>
+                    </div>
+                {/if}
             {:else if activeTab === 'zeek'}
                 <!-- Zeek 入侵检测（待开发） -->
                 <div class="module-placeholder">
@@ -176,6 +225,7 @@
     #app-wrapper {
         height: 100vh;
         width: 100vw;
+        background-color: var(--bg-primary);
     }
     
     /* 控制台首页样式 */
@@ -262,6 +312,14 @@
         border-color: var(--border-color-light);
         box-shadow: var(--shadow-lg);
         transform: translateY(-2px);
+    }
+
+    .dash-card.clickable {
+        cursor: pointer;
+    }
+
+    .dash-card.clickable:hover {
+        background: var(--bg-tertiary);
     }
     
     .card-icon {

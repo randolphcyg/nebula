@@ -101,3 +101,41 @@
     --z-tooltip: 1070;
     --z-toast: 1080;
 }
+
+/* ==================== 亮色模式（默认） ==================== */
+[data-theme='light'] {
+    /* 背景色 - 亮色模式更浅 */
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --bg-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    
+    /* 文字颜色 */
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-tertiary: #64748b;
+    --text-muted: #94a3b8;
+    
+    /* 边框颜色 */
+    --border-color: #e2e8f0;
+    --border-color-light: #cbd5e1;
+}
+
+/* ==================== 暗色模式 ==================== */
+[data-theme='dark'] {
+    /* 背景色 - 暗色模式更深 */
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #0f1420;
+    --bg-tertiary: #1a1f2e;
+    --bg-card: linear-gradient(145deg, #111827 0%, #0a0e1a 100%);
+    
+    /* 文字颜色 - 暗色模式更亮 */
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --text-muted: #64748b;
+    
+    /* 边框颜色 */
+    --border-color: #1e293b;
+    --border-color-light: #334155;
+}

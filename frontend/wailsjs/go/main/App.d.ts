@@ -5,15 +5,23 @@ import {models} from '../models';
 
 export function BatchDeleteFiles(arg1:Array<number>):Promise<void>;
 
+export function BatchUpdateUserStatus(arg1:Array<number>,arg2:number,arg3:string):Promise<void>;
+
 export function ChangePassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function CheckPermission(arg1:string,arg2:string,arg3:string):Promise<boolean>;
 
 export function DeleteFile(arg1:number):Promise<void>;
 
+export function DeleteUser(arg1:number,arg2:string):Promise<void>;
+
 export function FollowStream(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function GetAllFrames(arg1:string,arg2:string):Promise<string>;
+
+export function GetAllRoles():Promise<Array<Record<string, any>>>;
+
+export function GetAuditLogs(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function GetCurrentUser(arg1:string):Promise<Record<string, any>>;
 
@@ -27,6 +35,10 @@ export function GetPacketHex(arg1:string,arg2:number):Promise<string>;
 
 export function GetPacketsByPage(arg1:string,arg2:number,arg3:number,arg4:string):Promise<string>;
 
+export function GetPublicKey():Promise<string>;
+
+export function GetUsers():Promise<Array<Record<string, any>>>;
+
 export function GetWiresharkVersion():Promise<string>;
 
 export function ImportFromPaths(arg1:Array<string>):Promise<Array<models.PcapFile>>;
@@ -34,5 +46,15 @@ export function ImportFromPaths(arg1:Array<string>):Promise<Array<models.PcapFil
 export function ImportPcapsDialog():Promise<Array<models.PcapFile>>;
 
 export function Login(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function Register(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SearchUsers(arg1:string):Promise<Array<Record<string, any>>>;
+
+export function UpdateUserProfile(arg1:number,arg2:string,arg3:string):Promise<void>;
+
+export function UpdateUserRole(arg1:number,arg2:number):Promise<void>;
+
+export function UpdateUserStatus(arg1:number,arg2:number,arg3:string):Promise<void>;
 
 export function ValidateToken(arg1:string):Promise<Record<string, any>>;

@@ -43,12 +43,12 @@ function applyTheme(theme: ThemeConfig) {
     
     const root = document.documentElement;
     
-    // 应用暗色模式
+    // 应用亮色/暗色模式
     if (theme.mode === 'dark') {
         root.setAttribute('data-theme', 'dark');
         root.classList.add('dark');
     } else {
-        root.removeAttribute('data-theme');
+        root.setAttribute('data-theme', 'light');
         root.classList.remove('dark');
     }
     

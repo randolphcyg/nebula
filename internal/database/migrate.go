@@ -15,15 +15,18 @@ func (d *Database) Migrate() error {
 		&models.User{},
 		&models.Role{},
 		&models.Permission{},
+		&models.AuditLog{},
 	)
 }
 
 func (d *Database) Seed() error {
+	// 检查是否已有角色数据
 	var count int64
 	if err := d.db.Model(&models.Role{}).Count(&count).Error; err != nil {
 		return err
 	}
 
+	// 如果没有任何角色，初始化所有角色
 	if count == 0 {
 		roles := []models.Role{
 			{
@@ -41,11 +44,33 @@ func (d *Database) Seed() error {
 				Code:        "guest",
 				Description: "只读权限",
 			},
+			{
+				Name:        "普通用户",
+				Code:        "user",
+				Description: "注册用户，需要管理员审核",
+			},
 		}
 
 		for _, role := range roles {
 			if err := d.db.Create(&role).Error; err != nil {
 				return fmt.Errorf("创建角色 %s 失败：%v", role.Name, err)
+			}
+		}
+	} else {
+		// 如果已有角色，检查是否存在 user 角色，不存在则创建
+		var userRole models.Role
+		if err := d.db.Where("code = ?", "user").First(&userRole).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				// user 角色不存在，创建它
+				userRole = models.Role{
+					Name:        "普通用户",
+					Code:        "user",
+					Description: "注册用户，需要管理员审核",
+				}
+				if err := d.db.Create(&userRole).Error; err != nil {
+					return fmt.Errorf("创建 user 角色失败：%v", err)
+				}
+				fmt.Println("✅ 已创建 user 角色")
 			}
 		}
 	}

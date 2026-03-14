@@ -1,11 +1,12 @@
 import { app } from '../stores/app';
 import { error as toastError, success as toastSuccess, warning as toastWarning, info as toastInfo } from '../stores/toast';
+import { logger } from './logger';
 
 /**
  * 统一的错误处理函数
  */
 export function handleError(error: any, customMessage?: string) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
     
     const message = customMessage || (typeof error === 'string' ? error : '操作失败，请稍后重试');
     app.setError(message);
@@ -154,7 +155,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
         await navigator.clipboard.writeText(text);
         return true;
     } catch (err) {
-        console.error('无法复制:', err);
+        logger.error('无法复制:', err);
         return false;
     }
 }
@@ -176,6 +177,8 @@ export function downloadFile(content: string, filename: string, mimeType: string
 
 /**
  * 解析 JWT Token（简单解析，不验证签名）
+ * ⚠️ 仅用于解码 Token 中的非敏感信息（如用户名、过期时间）
+ * 不可用于权限验证！
  */
 export function parseJwt(token: string): any {
     try {
@@ -189,7 +192,7 @@ export function parseJwt(token: string): any {
         );
         return JSON.parse(jsonPayload);
     } catch (e) {
-        console.error('解析 Token 失败:', e);
+        logger.error('解析 Token 失败:', e);
         return null;
     }
 }

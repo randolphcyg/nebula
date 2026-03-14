@@ -61,6 +61,14 @@ function createAuthStore() {
                 currentUser = state.user;
             })();
             return currentUser;
+        },
+        
+        getToken: (): string => {
+            let token = '';
+            subscribe(state => {
+                token = state.token || '';
+            })();
+            return token;
         }
     };
 }

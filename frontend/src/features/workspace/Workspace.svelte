@@ -4,12 +4,43 @@
     import InterfaceList from '../analyzer/pages/InterfaceList.svelte';
     import Profile from '../user/pages/Profile.svelte';
     import { info as showInfo } from '../../stores/toast';
-    import { onMount } from 'svelte';
+    import { onMount, createEventDispatcher } from 'svelte';
+    import { app } from '../../stores/app';
 
     let currentView: 'dashboard' | 'pcap-list' | 'pcap-detail' | 'live' | 'auto' | 'profile' = 'dashboard';
+    let activeTab = 'home';
+    
+    const dispatch = createEventDispatcher();
 
     let selectedFile: any = null;
     let selectedInterface: any = null;
+
+    // 订阅当前激活的 tab
+    app.subscribe(state => {
+        activeTab = state.activeTab;
+        // 当切换到 profile tab 时，显示个人中心视图
+        if (activeTab === 'profile') {
+            currentView = 'profile';
+        } else if (activeTab === 'analyzer' && currentView === 'profile') {
+            // 从 profile 切换到 analyzer 时，回到 dashboard
+            currentView = 'dashboard';
+        }
+    });
+
+    // 监听全局 analyze 事件
+    onMount(() => {
+        function handleAnalyzeEvent(event: Event) {
+            const customEvent = event as CustomEvent;
+            selectedFile = customEvent.detail;
+            currentView = 'pcap-detail';
+        }
+
+        window.addEventListener('analyze', handleAnalyzeEvent);
+        
+        return () => {
+            window.removeEventListener('analyze', handleAnalyzeEvent);
+        };
+    });
 
     const features = [
         {
@@ -31,6 +62,13 @@
 
     function navigateTo(viewId: any) {
         currentView = viewId;
+        if (viewId === 'profile') {
+            // 个人中心直接显示，不切换 tab
+            // tab 已经在 Sidebar 中处理
+        } else {
+            // 其他功能保持 analyzer 标签激活
+            dispatch('tabChange', 'analyzer');
+        }
     }
 
     function handleAnalyze(event: CustomEvent) {
@@ -42,22 +80,6 @@
         selectedInterface = event.detail;
         showInfo(`即将启动网卡 [${selectedInterface.name}] 的实时抓包功能`);
     }
-    
-    onMount(() => {
-        // 监听来自侧边栏的导航事件
-        function handleNavigate(event: CustomEvent) {
-            const view = event.detail as string;
-            if (view) {
-                navigateTo(view);
-            }
-        }
-        
-        window.addEventListener('navigate' as any, handleNavigate as any);
-        
-        return () => {
-            window.removeEventListener('navigate' as any, handleNavigate as any);
-        };
-    });
 </script>
 
 <div class="hub-container">
@@ -121,6 +143,7 @@
         height: 100%;
         display: flex;
         flex-direction: column;
+        background-color: var(--bg-primary);
     }
 
     .dashboard {
@@ -134,8 +157,8 @@
     }
 
     .card {
-        background: #1e293b;
-        border: 1px solid #334155;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 1.5rem;
         cursor: pointer;
@@ -144,8 +167,9 @@
     }
 
     .card:hover, .card:focus {
-        border-color: #6366f1;
+        border-color: var(--color-primary);
         transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
     }
 
     .card-header {
@@ -166,25 +190,25 @@
     }
 
     .badge.ready {
-        background: #064e3b;
-        color: #34d399;
+        background: rgba(6, 78, 59, 0.2);
+        color: #10b981;
     }
 
     .badge.planning {
-        background: #1e3a8a;
-        color: #93c5fd;
+        background: rgba(30, 58, 138, 0.2);
+        color: #3b82f6;
     }
 
     h3 {
         margin: 0 0 0.5rem 0;
         font-size: 1.1rem;
-        color: #f8fafc;
+        color: var(--text-primary);
     }
 
     p {
         margin: 0;
         font-size: 0.85rem;
-        color: #94a3b8;
+        color: var(--text-secondary);
         line-height: 1.4;
     }
 
@@ -201,16 +225,16 @@
         align-items: center;
         gap: 1rem;
         padding: 0 0 12px 0;
-        border-bottom: 1px solid #334155;
+        border-bottom: 1px solid var(--border-color);
         margin-bottom: 12px;
-        color: #f1f5f9;
+        color: var(--text-primary);
         font-weight: bold;
     }
 
     .back-btn {
         background: transparent;
-        border: 1px solid #475569;
-        color: #cbd5e1;
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
         padding: 6px 14px;
         border-radius: 6px;
         cursor: pointer;
@@ -219,8 +243,8 @@
     }
 
     .back-btn:hover {
-        background: #1e293b;
-        color: white;
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
     }
 
     .title {
@@ -228,7 +252,7 @@
     }
 
     .highlight {
-        color: #38bdf8;
+        color: var(--color-info);
         margin-left: 6px;
     }
 
@@ -244,6 +268,6 @@
         justify-content: center;
         align-items: center;
         height: 80%;
-        color: #64748b;
+        color: var(--text-muted);
     }
 </style>

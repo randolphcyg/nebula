@@ -4,8 +4,10 @@
     import JsonTree from '../components/JsonTree.svelte';
     import StreamModal from '../components/StreamModal.svelte';
     import { success as showSuccess } from '../../../stores/toast';
+    import { logger } from '../../../utils/logger';
+    import type { PcapFile } from '../../../types';
 
-    export let file: any;
+    export let file: PcapFile;
 
     let isLoadingData = false;
     let packets: any[] = [];
@@ -78,7 +80,7 @@
             await navigator.clipboard.writeText(text);
             showSuccess('已复制到剪贴板');
         } catch (err) {
-            console.error('无法复制:', err);
+            logger.error('无法复制:', err);
         }
     }
 
@@ -120,7 +122,7 @@
                 streamPayloads = [{ dir: 'client', hexData: '' }];
             }
         } catch (err) {
-            console.error('Failed to load stream data:', err);
+            logger.error('Failed to load stream data:', err);
             streamPayloads = [{ dir: 'client', hexData: '' }];
         } finally {
             isStreamLoading = false;
@@ -435,16 +437,17 @@
         padding-bottom: 24px;
         overflow-y: auto;
         padding-right: 8px;
+        background-color: var(--bg-primary);
     }
 
     .detail-container::-webkit-scrollbar { width: 8px; }
     .detail-container::-webkit-scrollbar-track { background: transparent; }
-    .detail-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    .detail-container::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .detail-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+    .detail-container::-webkit-scrollbar-thumb:hover { background: var(--border-color-light); }
 
     .level-box {
-        background: #111827;
-        border: 1px solid #1e293b;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         display: flex;
         flex-direction: column;
@@ -454,72 +457,72 @@
     }
 
     .level-header {
-        background: #0f172a;
+        background: var(--bg-tertiary);
         padding: 10px 16px;
-        border-bottom: 1px solid #1e293b;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
 
     .level-header.flex-between { justify-content: space-between; }
-    .level-header h3 { margin: 0; font-size: 0.95rem; color: #f1f5f9; display: flex; align-items: center; gap: 8px; }
-    .level-num { background: #4f46e5; color: white; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-    .sub-title { font-size: 0.8rem; color: #64748b; font-weight: normal; margin-left: 8px; }
+    .level-header h3 { margin: 0; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .level-num { background: var(--color-primary); color: white; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+    .sub-title { font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-left: 8px; }
 
     /* ================= 层级 1: 基本信息 ================= */
     .level-1 { flex: none; }
     .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 16px; }
     .info-item { display: flex; flex-direction: column; gap: 4px; }
-    .info-item .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;}
-    .info-item .value { font-size: 0.9rem; color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-    .highlight-blue { color: #38bdf8 !important; }
-    .sys-font { font-family: 'Fira Code', monospace; color: #94a3b8 !important;}
+    .info-item .label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;}
+    .info-item .value { font-size: 0.9rem; color: var(--text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .highlight-blue { color: var(--color-info) !important; }
+    .sys-font { font-family: 'Fira Code', monospace; color: var(--text-tertiary) !important;}
     .loading-spinner { color: #f59e0b; font-size: 0.8rem; font-weight: bold; }
     .status-badge.done { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;}
 
     /* ================= 层级 2: 文件帧流 ================= */
     .level-2 { min-height: 360px; flex: 1 0 auto; }
     .global-filter-bar { display: flex; align-items: center; gap: 8px; }
-    .filter-label { font-size: 0.8rem; color: #38bdf8; font-weight: bold;}
+    .filter-label { font-size: 0.8rem; color: var(--color-info); font-weight: bold;}
     .filter-input-wrapper { position: relative; display: flex; align-items: center; }
-    .filter-input-wrapper input { background: #1e293b; border: 1px solid #38bdf8; color: white; padding: 4px 28px 4px 8px; border-radius: 4px; outline: none; font-size: 0.8rem; width: 260px; transition: 0.2s; }
+    .filter-input-wrapper input { background: var(--bg-tertiary); border: 1px solid var(--color-info); color: var(--text-primary); padding: 4px 28px 4px 8px; border-radius: 4px; outline: none; font-size: 0.8rem; width: 260px; transition: 0.2s; }
     .filter-input-wrapper input:focus { box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3); }
-    .clear-btn { position: absolute; right: 4px; background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0 4px; transition: color 0.2s; }
-    .clear-btn:hover { color: #f8fafc; }
-    .action-btn { background: #1e293b; border: 1px solid #334155; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
-    .action-btn:hover:not(:disabled) { background: #3b82f6; }
+    .clear-btn { position: absolute; right: 4px; background: transparent; border: none; color: var(--text-tertiary); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0 4px; transition: color 0.2s; }
+    .clear-btn:hover { color: var(--text-primary); }
+    .action-btn { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 12px; border-radius: 4px; cursor: pointer; }
+    .action-btn:hover:not(:disabled) { background: var(--color-primary); border-color: var(--color-primary); color: white; }
     .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .packet-list-area { flex: 1; overflow: auto; }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem; table-layout: fixed;}
-    .data-table th { position: sticky; top: 0; background: #1e293b; padding: 6px 12px; color: #cbd5e1; z-index: 10; font-weight: normal;}
-    .data-table td { padding: 4px 12px; border-bottom: 1px solid #1e293b; color: #e2e8f0; white-space: nowrap;}
-    .data-table tbody tr:hover { background: #1f2937; cursor: pointer;}
+    .data-table th { position: sticky; top: 0; background: var(--bg-tertiary); padding: 6px 12px; color: var(--text-primary); z-index: 10; font-weight: normal;}
+    .data-table td { padding: 4px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); white-space: nowrap;}
+    .data-table tbody tr:hover { background: var(--bg-tertiary); cursor: pointer;}
     .active-row { background: rgba(79, 70, 229, 0.3) !important; }
     .info-cell { overflow: hidden; text-overflow: ellipsis; }
-    .badge { background: #1e293b; padding: 2px 6px; border-radius: 4px; font-family: monospace; border: 1px solid #334155;}
+    .badge { background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-family: monospace; border: 1px solid var(--border-color);}
 
     /* 分页器 (✨ 更新样式) */
-    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: #0f172a; border-top: 1px solid #1e293b; font-size: 0.85rem; color: #94a3b8; }
+    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: var(--bg-tertiary); border-top: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-secondary); }
     .page-info { display: flex; align-items: center; gap: 12px; }
-    .size-selector { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; outline: none; font-size: 0.75rem; cursor: pointer; }
+    .size-selector { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 2px 6px; border-radius: 4px; outline: none; font-size: 0.75rem; cursor: pointer; }
     .page-controls { display: flex; align-items: center; gap: 6px; }
-    .page-controls button { background: #1e293b; border: 1px solid #334155; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-size: 0.8rem;}
-    .page-controls button:hover:not(:disabled) { background: #3b82f6; border-color: #3b82f6; }
+    .page-controls button { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-size: 0.8rem;}
+    .page-controls button:hover:not(:disabled) { background: var(--color-primary); border-color: var(--color-primary); color: white; }
     .page-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ================= 层级 3: 帧系列透视 ================= */
     .level-3 { min-height: 550px; flex: 1 0 auto; }
-    .detail-split-pane { display: flex; flex: 1; overflow: hidden; background: #0f172a;}
+    .detail-split-pane { display: flex; flex: 1; overflow: hidden; background: var(--bg-primary);}
     .pane-box { display: flex; flex-direction: column; overflow: hidden; }
-    .proto-tree { flex: 4; border-right: 1px solid #1e293b; }
+    .proto-tree { flex: 4; border-right: 1px solid var(--border-color); }
     .hex-view { flex: 5; }
-    .pane-title { padding: 6px 12px; background: #1e293b; font-size: 0.8rem; color: #94a3b8; border-bottom: 1px solid #334155; }
-    .scroll-view { flex: 1; overflow: auto; padding: 12px; background: #111827;}
+    .pane-title { padding: 6px 12px; background: var(--bg-tertiary); font-size: 0.8rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+    .scroll-view { flex: 1; overflow: auto; padding: 12px; background: var(--bg-secondary);}
     .hex-scroll pre { white-space: pre; }
-    pre { margin: 0; font-size: 0.8rem; color: #a5b4fc; font-family: 'Fira Code', Consolas, monospace; line-height: 1.4; }
-    .placeholder { text-align: center; color: #475569; margin-top: 2rem; font-size: 0.85rem;}
+    pre { margin: 0; font-size: 0.8rem; color: var(--text-tertiary); font-family: 'Fira Code', Consolas, monospace; line-height: 1.4; }
+    .placeholder { text-align: center; color: var(--text-muted); margin-top: 2rem; font-size: 0.85rem;}
 
     /* 追踪流按钮 */
     .stream-btn {

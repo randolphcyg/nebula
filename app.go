@@ -9,6 +9,7 @@ import (
 	"nebula/internal/models"
 	"nebula/internal/services/analyzer"
 	"nebula/internal/services/pcap"
+	"nebula/internal/utils"
 )
 
 // App struct
@@ -21,6 +22,7 @@ type App struct {
 	PermissionCheck *auth.PermissionChecker
 	AnalyzerService *analyzer.Service
 	PcapService     *pcap.Service
+	Crypto          *utils.Crypto
 }
 
 // NewApp creates a new App application struct
@@ -68,6 +70,13 @@ func (a *App) startup(ctx context.Context) {
 
 	// 6. 初始化分析器服务
 	a.AnalyzerService = analyzer.NewService()
+
+	// 7. 初始化加密工具
+	a.Crypto, err = utils.NewCrypto()
+	if err != nil {
+		fmt.Printf("加密工具初始化失败：%v\n", err)
+		return
+	}
 
 	fmt.Println("NEBULA 系统初始化完成")
 }
@@ -143,8 +152,19 @@ func (a *App) BatchDeleteFiles(ids []uint) error {
 // 认证与权限
 // ============================
 
-// 用户登录
-func (a *App) Login(username, password string) (map[string]interface{}, error) {
+// 获取公钥（用于前端加密密码）
+func (a *App) GetPublicKey() (string, error) {
+	return a.Crypto.GetPublicKey()
+}
+
+// 用户登录（加密密码）
+func (a *App) Login(username, encryptedPassword string) (map[string]interface{}, error) {
+	// 解密密码
+	password, err := a.Crypto.DecryptPassword(encryptedPassword)
+	if err != nil {
+		return nil, fmt.Errorf("密码解密失败：%v", err)
+	}
+
 	resp, err := a.AuthService.Login(auth.LoginRequest{
 		Username: username,
 		Password: password,
@@ -158,6 +178,21 @@ func (a *App) Login(username, password string) (map[string]interface{}, error) {
 		"expiresAt": resp.ExpiresAt,
 		"user":      resp.User,
 	}, nil
+}
+
+// 用户注册（加密密码）
+func (a *App) Register(username, email, encryptedPassword string) error {
+	// 解密密码
+	password, err := a.Crypto.DecryptPassword(encryptedPassword)
+	if err != nil {
+		return fmt.Errorf("密码解密失败：%v", err)
+	}
+
+	return a.AuthService.Register(auth.RegisterRequest{
+		Username: username,
+		Email:    email,
+		Password: password,
+	})
 }
 
 // 验证 Token
@@ -196,6 +231,147 @@ func (a *App) GetCurrentUser(token string) (map[string]interface{}, error) {
 		"status":    user.Status,
 		"lastLogin": user.LastLogin,
 	}, nil
+}
+
+// 获取所有用户（管理员功能）
+func (a *App) GetUsers() ([]map[string]interface{}, error) {
+	users, err := a.AuthService.GetAllUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(users))
+	for _, user := range users {
+		result = append(result, map[string]interface{}{
+			"id":        user.ID,
+			"username":  user.Username,
+			"email":     user.Email,
+			"role":      user.Role.Name,
+			"roleCode":  user.Role.Code,
+			"roleID":    user.RoleID,
+			"status":    user.Status,
+			"lastLogin": user.LastLogin,
+			"createdAt": user.CreatedAt,
+		})
+	}
+	return result, nil
+}
+
+// 搜索用户
+func (a *App) SearchUsers(keyword string) ([]map[string]interface{}, error) {
+	users, err := a.AuthService.SearchUsers(keyword)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(users))
+	for _, user := range users {
+		result = append(result, map[string]interface{}{
+			"id":        user.ID,
+			"username":  user.Username,
+			"email":     user.Email,
+			"role":      user.Role.Name,
+			"roleCode":  user.Role.Code,
+			"roleID":    user.RoleID,
+			"status":    user.Status,
+			"lastLogin": user.LastLogin,
+			"createdAt": user.CreatedAt,
+		})
+	}
+	return result, nil
+}
+
+// 更新用户状态（管理员功能）
+func (a *App) UpdateUserStatus(userID int, status int, token string) error {
+	// 获取当前操作者信息
+	claims, err := a.AuthService.ValidateToken(token)
+	if err != nil {
+		return fmt.Errorf("验证 token 失败：%v", err)
+	}
+
+	return a.AuthService.UpdateUserStatus(userID, status, claims.UserID, claims.Username)
+}
+
+// 批量更新用户状态
+func (a *App) BatchUpdateUserStatus(userIDs []int, status int, token string) error {
+	claims, err := a.AuthService.ValidateToken(token)
+	if err != nil {
+		return fmt.Errorf("验证 token 失败：%v", err)
+	}
+
+	return a.AuthService.BatchUpdateUserStatus(userIDs, status, claims.UserID, claims.Username)
+}
+
+// 获取审核日志
+func (a *App) GetAuditLogs(limit int) ([]map[string]interface{}, error) {
+	logs, err := a.AuthService.GetAuditLogs(limit)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(logs))
+	for _, log := range logs {
+		result = append(result, map[string]interface{}{
+			"id":        log.ID,
+			"userID":    log.UserID,
+			"username":  log.Username,
+			"operator":  log.Operator,
+			"action":    log.Action,
+			"oldStatus": log.OldStatus,
+			"newStatus": log.NewStatus,
+			"remark":    log.Remark,
+			"createdAt": log.CreatedAt,
+		})
+	}
+	return result, nil
+}
+
+// 获取所有角色
+func (a *App) GetAllRoles() ([]map[string]interface{}, error) {
+	roles, err := a.AuthService.GetAllRoles()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(roles))
+	for _, role := range roles {
+		perms := make([]string, 0, len(role.Permissions))
+		for _, p := range role.Permissions {
+			perms = append(perms, p.Code)
+		}
+
+		result = append(result, map[string]interface{}{
+			"id":          role.ID,
+			"name":        role.Name,
+			"code":        role.Code,
+			"description": role.Description,
+			"permissions": perms,
+		})
+	}
+	return result, nil
+}
+
+// 更新用户角色
+func (a *App) UpdateUserRole(userID int, roleID int) error {
+	return a.AuthService.UpdateUserRole(userID, roleID)
+}
+
+// 更新用户资料
+func (a *App) UpdateUserProfile(userID int, email string, token string) error {
+	claims, err := a.AuthService.ValidateToken(token)
+	if err != nil {
+		return fmt.Errorf("验证 token 失败：%v", err)
+	}
+	return a.AuthService.UpdateUserProfile(userID, email, claims.UserID, claims.Username)
+}
+
+// 删除用户
+func (a *App) DeleteUser(userID int, token string) error {
+	claims, err := a.AuthService.ValidateToken(token)
+	if err != nil {
+		return fmt.Errorf("验证 token 失败：%v", err)
+	}
+	return a.AuthService.DeleteUser(userID, claims.UserID, claims.Username)
 }
 
 // 检查权限

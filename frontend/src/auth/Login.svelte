@@ -1,15 +1,46 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
-    import { Login as LoginApi } from '../../wailsjs/go/main/App';
+    import { createEventDispatcher, onMount } from 'svelte';
+    import { Login as LoginApi, GetPublicKey } from '../../wailsjs/go/main/App';
     import { auth } from '$lib/stores/auth';
-    import { handleError } from '$lib/utils/helpers';
+    import { handleError } from '$lib/utils';
+    import { logger } from '$lib/utils/logger';
+    import JSEncrypt from 'jsencrypt';
     
     let username = '';
     let password = '';
     let isLoading = false;
     let error = '';
+    let publicKey = '';
     
     const dispatch = createEventDispatcher();
+    
+    // 获取公钥
+    async function loadPublicKey() {
+        try {
+            const base64Key = await GetPublicKey();
+            // 后端返回的是 Base64 编码的 PEM，需要解码
+            publicKey = atob(base64Key);
+            logger.success('公钥已加载', publicKey.substring(0, 50) + '...');
+        } catch (err) {
+            logger.error('获取公钥失败:', err);
+            error = '安全组件初始化失败，请刷新页面';
+        }
+    }
+    
+    // 加密密码
+    function encryptPassword(pwd: string): string {
+        if (!publicKey) {
+            throw new Error('公钥未加载');
+        }
+        const encryptor = new JSEncrypt();
+        encryptor.setPublicKey(publicKey);
+        const encrypted = encryptor.encrypt(pwd);
+        if (!encrypted) {
+            throw new Error('密码加密失败');
+        }
+        logger.success('密码已加密');
+        return encrypted;
+    }
     
     async function handleLogin() {
         error = '';
@@ -19,10 +50,20 @@
             return;
         }
         
+        // 加密密码
+        let encryptedPassword: string;
+        try {
+            encryptedPassword = encryptPassword(password);
+            console.log('✅ 密码已加密');
+        } catch (err: any) {
+            error = err.message;
+            return;
+        }
+        
         isLoading = true;
         
         try {
-            const response = await LoginApi(username, password);
+            const response = await LoginApi(username, encryptedPassword);
             
             if (response && response.token) {
                 auth.login(response.token, response.user);
@@ -31,7 +72,15 @@
                 error = '登录失败：' + (response.msg || '未知错误');
             }
         } catch (err: any) {
-            error = handleError(err, '登录失败，请稍后重试');
+            // 检查是否是特定的错误信息
+            const errorMsg = err.message || err.error || String(err);
+            if (errorMsg.includes('用户已被禁用')) {
+                error = '该用户已被禁用，请联系管理员';
+            } else if (errorMsg.includes('用户待审核')) {
+                error = '该用户正在等待审核，请等待管理员批准';
+            } else {
+                error = handleError(err, '登录失败，请稍后重试');
+            }
         } finally {
             isLoading = false;
         }
@@ -42,6 +91,11 @@
             handleLogin();
         }
     }
+    
+    // 组件挂载时加载公钥
+    onMount(() => {
+        loadPublicKey();
+    });
 </script>
 
 <div class="login-container">
@@ -102,6 +156,12 @@
         
         <div class="login-footer">
             <p class="hint">默认账号：admin / admin123</p>
+            <p class="register-link">
+                还没有账户？
+                <a href="#" on:click|preventDefault={() => dispatch('showRegister')}>
+                    立即注册
+                </a>
+            </p>
         </div>
     </div>
 </div>

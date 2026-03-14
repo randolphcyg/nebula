@@ -10,10 +10,12 @@
     } from '../../../../wailsjs/go/main/App';
     import { error as showError, success as showSuccess, warning as showWarning } from '../../../stores/toast';
     import { debounce } from '../../../utils/helpers';
+    import { logger } from '../../../utils/logger';
+    import type { PcapFile, PcapFileWithProgress } from '../../../types';
 
     const dispatch = createEventDispatcher();
 
-    let pcapFiles: any[] = [];
+    let pcapFiles: PcapFileWithProgress[] = [];
     let searchFileName = '';
     let searchFileSize = '';
     let searchStartDate = '';
@@ -43,14 +45,14 @@
             if (targetIndex !== -1) {
                 if (data.percent === -1) {
                     pcapFiles[targetIndex].status = "导入失败";
-                    pcapFiles[targetIndex]._error = data.error;
+                    pcapFiles[targetIndex].uploadError = data.error;
                     showError(`文件 [${data.fileName}] 导入失败：${data.error}`);
                 } else if (data.percent === 100) {
                     pcapFiles[targetIndex].status = "导入成功";
-                    pcapFiles[targetIndex]._progress = undefined;
+                    pcapFiles[targetIndex].progress = undefined;
                 } else {
                     pcapFiles[targetIndex].status = "导入中";
-                    pcapFiles[targetIndex]._progress = data.percent;
+                    pcapFiles[targetIndex].progress = data.percent;
                 }
                 pcapFiles = [...pcapFiles];
             }
@@ -122,7 +124,7 @@
             pcapFiles = resp.list || [];
             totalCount = resp.total || 0;
         } catch (err) {
-            console.error("加载列表失败:", err);
+            logger.error("加载列表失败:", err);
         }
     }
 
@@ -194,7 +196,7 @@
                 }
             }, 2000);
         } catch (err) {
-            console.error("复制失败:", err);
+            logger.error("复制失败:", err);
             alert("复制失败，请检查浏览器剪贴板权限");
         }
     }
@@ -281,10 +283,8 @@
                                class="checkbox-ui"/>
                     </td>
 
-                    <td class="filename-cell" title={file.fileName}
-                        on:click={() => document.querySelector(`input[value="${file.id}"]`)?.click()}>
-
-                        <div class="filename-layout">
+                    <td class="filename-cell" title={file.fileName}>
+                        <div class="filename-layout" on:click|stopPropagation>
                             <div class="filename-text">{file.fileName}</div>
 
                             <div class="copy-btn"
@@ -300,11 +300,11 @@
                     <td>{file.fileSize}</td>
                     <td class="time-col">{formatDate(file.createdAt)}</td>
                     <td class="status-cell">
-                        {#if file.status === '导入中' && file._progress !== undefined}
+                        {#if file.status === '导入中' && file.progress !== undefined}
                             <div class="inline-progress">
-                                <div class="inline-meta">导入中 {file._progress}%</div>
+                                <div class="inline-meta">导入中 {file.progress}%</div>
                                 <div class="inline-bar-bg">
-                                    <div class="inline-bar-fill" style="width: {file._progress}%"></div>
+                                    <div class="inline-bar-fill" style="width: {file.progress}%"></div>
                                 </div>
                             </div>
                         {:else}
@@ -313,7 +313,7 @@
                                 ${file.status === '导入成功' ? 'done' : ''}
                             `}></span>
                             <span class:text-error={file.status === '导入失败'}
-                                  title={file._error || ""}>{file.status}</span>
+                                  title={file.uploadError || ""}>{file.status}</span>
                         {/if}
                     </td>
                     <td class="sticky-col-body">
@@ -341,6 +341,7 @@
         display: flex;
         flex-direction: column;
         position: relative;
+        background-color: var(--bg-primary);
     }
 
     .drag-overlay {
@@ -351,13 +352,13 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 3px dashed #6366f1;
+        border: 3px dashed var(--color-primary);
         border-radius: 8px;
     }
 
     .drag-content {
         text-align: center;
-        color: white;
+        color: var(--text-primary);
     }
 
     .filter-panel {
@@ -366,8 +367,8 @@
         gap: 16px;
         align-items: center;
         padding: 12px;
-        background: #111827;
-        border: 1px solid #1e293b;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         margin-bottom: 12px;
     }
@@ -379,18 +380,23 @@
     }
 
     .filter-group label {
-        color: #94a3b8;
+        color: var(--text-secondary);
         font-size: 0.85rem;
     }
 
     .filter-group input {
-        background: #1e293b;
-        border: 1px solid #334155;
-        color: white;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
         padding: 6px 10px;
         border-radius: 6px;
         outline: none;
         font-size: 0.85rem;
+        transition: border-color 0.2s;
+    }
+
+    .filter-group input:focus {
+        border-color: var(--color-primary);
     }
 
     .import-action {
@@ -398,43 +404,65 @@
     }
 
     .primary-btn {
-        background: #4f46e5;
+        background: var(--color-primary);
         color: white;
         border: none;
         padding: 8px 14px;
         border-radius: 6px;
         cursor: pointer;
-        transition: 0.2s;
+        transition: background 0.2s;
     }
 
     .primary-btn:hover {
-        background: #4338ca;
+        background: var(--color-primary-hover);
     }
 
     .action-btn {
-        background: #1e293b;
-        border: 1px solid #334155;
-        color: white;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
         padding: 6px 12px;
         border-radius: 4px;
         cursor: pointer;
+        transition: all 0.2s;
     }
 
     .action-btn.danger:hover {
         background: #ef4444;
         border-color: #ef4444;
+        color: white;
     }
 
     .action-btn:hover {
-        background: #3b82f6;
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
     }
 
     .table-wrapper {
         flex: 1;
         overflow: auto;
-        border: 1px solid #1e293b;
+        border: 1px solid var(--border-color);
         border-radius: 8px 8px 0 0;
-        background: #111827;
+        background: var(--bg-secondary);
+    }
+
+    .table-wrapper::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-track {
+        background: var(--bg-primary);
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 4px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: var(--border-color-light);
     }
 
     .data-table {
@@ -449,27 +477,41 @@
     .data-table th {
         position: sticky;
         top: 0;
-        background: #1e293b;
+        background: var(--bg-tertiary);
         padding: 12px;
         z-index: 10;
-        color: #cbd5e1;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
     }
 
     .data-table td {
         padding: 12px;
-        border-bottom: 1px solid #1e293b;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-secondary);
     }
 
     .data-table tbody tr:hover {
-        background: #1f2937;
+        background: var(--bg-tertiary);
+    }
+
+    .data-table tbody tr.selected-row {
+        background: rgba(79, 70, 229, 0.1);
     }
 
     .sticky-col-header {
         position: sticky !important;
         right: 0;
         z-index: 20 !important;
-        background: #1e293b;
+        background: var(--bg-tertiary);
         box-shadow: -2px 0 4px rgba(0, 0, 0, 0.3);
+        border-left: 1px solid var(--border-color);
+    }
+
+    .sticky-col-body {
+        position: sticky;
+        right: 0;
+        background: inherit;
+        z-index: 15;
     }
 
     /* 单元格进度条专属样式 */
@@ -487,13 +529,13 @@
 
     .inline-meta {
         font-size: 0.75rem;
-        color: #38bdf8;
+        color: var(--color-info);
         font-weight: bold;
     }
 
     .inline-bar-bg {
         height: 4px;
-        background: #0f172a;
+        background: var(--bg-primary);
         border-radius: 2px;
         overflow: hidden;
         width: 100%;
@@ -501,12 +543,25 @@
 
     .inline-bar-fill {
         height: 100%;
-        background: #38bdf8;
+        background: var(--color-info);
         transition: width 0.1s ease-out;
+    }
+
+    .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        background: #94a3b8;
     }
 
     .status-dot.error {
         background: #ef4444;
+    }
+
+    .status-dot.done {
+        background: #10b981;
     }
 
     .text-error {
@@ -517,12 +572,12 @@
         position: sticky;
         right: 0;
         z-index: 2;
-        background: #111827;
-        box-shadow: -2px 0 4px rgba(0, 0, 0, 0.3);
+        background: var(--bg-secondary);
+        box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
     }
 
     .data-table tbody tr:hover .sticky-col-body {
-        background: #1f2937;
+        background: var(--bg-tertiary);
     }
 
     .filename-cell {
@@ -537,12 +592,12 @@
     }
 
     .filename-text {
-        color: #38bdf8;
+        color: var(--color-info);
         font-weight: 500;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        flex: 1; /* 撑满剩余空间 */
+        flex: 1;
     }
 
     .copy-btn {
@@ -583,20 +638,27 @@
         display: flex;
         justify-content: space-between;
         padding: 12px;
-        background: #111827;
-        border: 1px solid #1e293b;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
         border-top: none;
         border-radius: 0 0 8px 8px;
     }
 
     .page-controls button {
-        background: #1e293b;
-        border: 1px solid #334155;
-        color: white;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
         padding: 4px 10px;
         border-radius: 4px;
         cursor: pointer;
         margin-left: 8px;
+        transition: all 0.2s;
+    }
+
+    .page-controls button:hover:not(:disabled) {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
     }
 
     .page-controls button:disabled {
@@ -608,35 +670,51 @@
         display: flex;
         justify-content: space-between;
         padding: 10px;
-        background: #1e3a8a;
+        background: var(--color-primary);
         border-radius: 6px;
         margin-bottom: 10px;
+        color: white;
     }
 
     .batch-btn {
-        background: #3b82f6;
+        background: rgba(255, 255, 255, 0.2);
         border: none;
         color: white;
         padding: 6px 12px;
         border-radius: 4px;
         cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .batch-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
     }
 
     .batch-btn.danger {
         background: #ef4444;
     }
 
+    .batch-btn.danger:hover {
+        background: #dc2626;
+    }
+
     .progress-panel {
-        background: #1e293b;
-        border: 1px solid #334155;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
         padding: 12px;
         border-radius: 8px;
         margin-bottom: 12px;
     }
 
+    .progress-panel h4 {
+        margin: 0 0 8px 0;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+    }
+
     .prog-bar-bg {
         height: 6px;
-        background: #0f172a;
+        background: var(--bg-primary);
         border-radius: 3px;
         overflow: hidden;
         margin-top: 4px;

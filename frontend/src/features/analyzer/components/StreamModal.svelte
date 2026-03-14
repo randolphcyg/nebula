@@ -203,8 +203,7 @@
                                     on:click={() => dispatch('switchStream', streamId - 1)}
                                     disabled={streamId <= 0}>▼</button>
 
-                            <input type="number" class="stream-input" min="0" value={streamId}
-                                   on:change={(e) => dispatch('switchStream', Math.max(0, parseInt(e.target.value) || 0))} />
+                            <input type="number" class="stream-input" min="0" bind:value={streamId} />
 
                             <button class="spin-btn"
                                     on:click={() => dispatch('switchStream', streamId + 1)}
@@ -231,17 +230,17 @@
 <style>
     /* ... 保持原有样式不变，并在此处新增警告框的样式 ... */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease-out; }
-    .modal-content { background: #0b1120; border: 1px solid #334155; border-radius: 8px; width: 85vw; max-width: 1200px; height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); animation: slideUp 0.3s ease-out; }
+    .modal-content { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; width: 85vw; max-width: 1200px; height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); animation: slideUp 0.3s ease-out; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #1e293b; background: #0f172a; border-radius: 8px 8px 0 0; }
-    .modal-header h3 { margin: 0; color: #f8fafc; font-size: 1.05rem; }
-    .close-btn { background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--border-color); background: var(--bg-tertiary); border-radius: 8px 8px 0 0; }
+    .modal-header h3 { margin: 0; color: var(--text-primary); font-size: 1.05rem; }
+    .close-btn { background: transparent; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
     .close-btn:hover { color: #ef4444; transform: scale(1.1); }
 
-    .modal-body { flex: 1; padding: 12px 20px; overflow: hidden; display: flex; flex-direction: column; background: #111827; gap: 8px; }
-    .loading-state { margin: auto; color: #38bdf8; font-family: monospace; font-size: 1.1rem; }
+    .modal-body { flex: 1; padding: 12px 20px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg-primary); gap: 8px; }
+    .loading-state { margin: auto; color: var(--color-info); font-family: monospace; font-size: 1.1rem; }
     .spinner { display: inline-block; animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
 
@@ -251,35 +250,35 @@
         padding: 8px 12px; border-radius: 4px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;
     }
 
-    .stream-text-area { flex: 1; overflow-y: auto; background: #fdfdfd; border: 1px solid #cbd5e1; border-radius: 4px; padding: 12px; font-family: Consolas, 'Courier New', monospace; font-size: 0.85rem; line-height: 1.4; white-space: pre-wrap; word-break: break-all; text-align: left; }
+    .stream-text-area { flex: 1; overflow-y: auto; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; padding: 12px; font-family: Consolas, 'Courier New', monospace; font-size: 0.85rem; line-height: 1.4; white-space: pre-wrap; word-break: break-all; text-align: left; }
     .client-text { color: #cc0000; }
     .server-text { color: #0000cc; }
 
-    .modal-footer-wrapper { display: flex; flex-direction: column; background: #0f172a; border-top: 1px solid #1e293b; border-radius: 0 0 8px 8px; }
-    .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid #1e293b; background: #182235; }
+    .modal-footer-wrapper { display: flex; flex-direction: column; background: var(--bg-tertiary); border-top: 1px solid var(--border-color); border-radius: 0 0 8px 8px; }
+    .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); }
     .control-item { display: flex; align-items: center; gap: 8px; }
-    .ctrl-label { font-size: 0.85rem; color: #94a3b8; }
-    .ui-select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 4px 10px; border-radius: 4px; outline: none; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
-    .ui-select:hover { border-color: #475569; }
+    .ctrl-label { font-size: 0.85rem; color: var(--text-secondary); }
+    .ui-select { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 10px; border-radius: 4px; outline: none; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+    .ui-select:hover { border-color: var(--border-color-light); }
 
     .stream-navigator { display: flex; align-items: center; }
-    .spinner-group { display: flex; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 4px; overflow: hidden; }
-    .spin-btn { background: #1e293b; border: none; color: #94a3b8; cursor: pointer; padding: 4px 8px; font-size: 0.75rem; transition: 0.2s; }
-    .spin-btn:disabled { color: #475569; cursor: not-allowed; }
-    .spin-btn:hover:not(:disabled) { background: #334155; color: #f8fafc; }
-    .stream-input { background: transparent; border: none; border-left: 1px solid #334155; border-right: 1px solid #334155; color: white; width: 45px; text-align: center; padding: 4px; font-size: 0.85rem; outline: none; }
+    .spinner-group { display: flex; align-items: center; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; }
+    .spin-btn { background: var(--bg-secondary); border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; font-size: 0.75rem; transition: 0.2s; }
+    .spin-btn:disabled { color: var(--text-muted); cursor: not-allowed; }
+    .spin-btn:hover:not(:disabled) { background: var(--border-color); color: var(--text-primary); }
+    .stream-input { background: transparent; border: none; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); color: var(--text-primary); width: 45px; text-align: center; padding: 4px; font-size: 0.85rem; outline: none; }
     .stream-input::-webkit-inner-spin-button { -webkit-appearance: none; }
 
     .action-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; }
-    .legend { display: flex; align-items: center; font-size: 0.85rem; color: #94a3b8; }
+    .legend { display: flex; align-items: center; font-size: 0.85rem; color: var(--text-secondary); }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .client-dot { background: #cc0000; box-shadow: 0 0 4px rgba(204,0,0,0.5); }
     .server-dot { background: #0000cc; box-shadow: 0 0 4px rgba(0,0,204,0.5); }
     .action-btns { display: flex; gap: 10px; }
-    .action-btn { background: #3b82f6; border: none; color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
-    .action-btn:hover { background: #2563eb; }
-    .action-btn.outline { background: transparent; border: 1px solid #475569; color: #cbd5e1; }
-    .action-btn.outline:hover { background: #334155; color: white; }
+    .action-btn { background: var(--color-primary); border: none; color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+    .action-btn:hover { background: var(--color-primary-hover); }
+    .action-btn.outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
+    .action-btn.outline:hover { background: var(--bg-tertiary); color: var(--text-primary); }
     /* 将行内元素改为块级元素，强制换行，并增加段落间距 */
     .stream-chunk {
         display: block;

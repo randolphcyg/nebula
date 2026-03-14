@@ -6,6 +6,7 @@
     let user;
     let sidebarOpen = true;
     let activeTab = 'home';
+    let showUserMenu = false;
     
     auth.subscribe(state => {
         user = state.user;
@@ -21,14 +22,38 @@
     
     const menuItems = [
         { id: 'home', label: '控制台', icon: '🏠' },
+        { id: 'pcapList', label: 'PCAP 流量包', icon: '📦' },
         { id: 'analyzer', label: '协议分析引擎', icon: '🔍' },
         { id: 'zeek', label: 'Zeek 入侵检测', icon: '🛡️' },
-        { id: 'ai', label: 'Dify 智能诊断', icon: '🧠' }
+        { id: 'ai', label: 'Dify 智能诊断', icon: '🧠' },
+        { id: 'users', label: '用户管理', icon: '👥', adminOnly: true },
+        { id: 'profile', label: '个人中心', icon: '👤' }
     ];
     
+    // 检查是否是管理员
+    function isAdmin(): boolean {
+        return user && user.roleCode === 'admin';
+    }
+    
+    // 过滤菜单项
+    function getVisibleMenuItems() {
+        return menuItems.filter(item => {
+            if (item.adminOnly && !isAdmin()) {
+                return false;
+            }
+            return true;
+        });
+    }
+    
     function handleLogout() {
+        showUserMenu = false;
         auth.logout();
         showInfo('已退出登录');
+    }
+    
+    function goToProfile() {
+        showUserMenu = false;
+        switchTab('profile');
     }
     
     function toggleSidebar() {
@@ -39,9 +64,21 @@
         app.setActiveTab(tabId);
         dispatch('tabChange', tabId);
     }
+    
+    function toggleUserMenu() {
+        showUserMenu = !showUserMenu;
+    }
+    
+    // 点击外部关闭菜单
+    function handleClickOutside(event: MouseEvent) {
+        const target = event.target as HTMLElement;
+        if (showUserMenu && !target.closest('.user-menu-container')) {
+            showUserMenu = false;
+        }
+    }
 </script>
 
-<div class="layout">
+<div class="layout" on:click={handleClickOutside}>
     <!-- 侧边栏 -->
     <aside class="sidebar" class:collapsed={!sidebarOpen}>
         <div class="sidebar-header">
@@ -54,7 +91,7 @@
         </div>
         
         <nav class="sidebar-nav">
-            {#each menuItems as item}
+            {#each getVisibleMenuItems() as item}
                 <a
                     href="#"
                     class="nav-item"
@@ -68,34 +105,6 @@
                 </a>
             {/each}
         </nav>
-        
-        <div class="sidebar-footer">
-            {#if sidebarOpen && user}
-                <div class="user-info">
-                    <div class="user-avatar">{user.username.charAt(0).toUpperCase()}</div>
-                    <div class="user-details">
-                        <div class="user-name">{user.username}</div>
-                        <div class="user-role">{user.role}</div>
-                    </div>
-                    <button class="profile-btn" on:click={() => {
-                        app.setActiveTab('analyzer');
-                        setTimeout(() => {
-                            const event = new CustomEvent('navigate', { detail: 'profile' });
-                            window.dispatchEvent(event);
-                        }, 100);
-                    }} title="个人中心">
-                        <span class="icon">⚙️</span>
-                    </button>
-                </div>
-            {/if}
-            
-            <button class="logout-btn" on:click={handleLogout} title="退出登录">
-                <span class="icon">🚪</span>
-                {#if sidebarOpen}
-                    <span>退出</span>
-                {/if}
-            </button>
-        </div>
     </aside>
     
     <!-- 主内容区 -->
@@ -108,7 +117,34 @@
             
             <div class="top-bar-actions">
                 {#if user}
-                    <span class="welcome-text">欢迎，{user.username}</span>
+                    <div class="user-menu-container">
+                        <button class="user-menu-trigger" on:click|stopPropagation={toggleUserMenu}>
+                            <div class="user-avatar-small">{user.username.charAt(0).toUpperCase()}</div>
+                            <span class="user-name-small">{user.username}</span>
+                            <span class="dropdown-arrow">{showUserMenu ? '▲' : '▼'}</span>
+                        </button>
+                        
+                        {#if showUserMenu}
+                            <div class="user-menu-dropdown" on:click|stopPropagation>
+                                <div class="dropdown-header">
+                                    <div class="dropdown-avatar">{user.username.charAt(0).toUpperCase()}</div>
+                                    <div class="dropdown-info">
+                                        <div class="dropdown-username">{user.username}</div>
+                                        <div class="dropdown-role">{user.role}</div>
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <button class="dropdown-item" on:click={goToProfile}>
+                                    <span class="dropdown-icon">👤</span>
+                                    个人中心
+                                </button>
+                                <button class="dropdown-item logout" on:click={handleLogout}>
+                                    <span class="dropdown-icon">🚪</span>
+                                    退出登录
+                                </button>
+                            </div>
+                        {/if}
+                    </div>
                 {/if}
             </div>
         </header>
@@ -208,96 +244,6 @@
         font-weight: 500;
     }
     
-    .sidebar-footer {
-        padding: var(--spacing-lg);
-        border-top: 1px solid var(--border-color);
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-md);
-    }
-    
-    .user-info {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-        padding: var(--spacing-sm);
-        background-color: var(--bg-tertiary);
-        border-radius: var(--radius-md);
-        flex: 1;
-    }
-    
-    .user-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-full);
-        background: linear-gradient(135deg, #4f46e5 0%, #10b981 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: var(--font-base);
-        color: white;
-    }
-    
-    .user-details {
-        flex: 1;
-        overflow: hidden;
-    }
-    
-    .user-name {
-        font-size: var(--font-sm);
-        font-weight: 600;
-        color: var(--text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .user-role {
-        font-size: var(--font-xs);
-        color: var(--text-muted);
-    }
-    
-    .profile-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border: none;
-        background: transparent;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        transition: all var(--transition-base);
-        font-size: var(--font-lg);
-    }
-    
-    .profile-btn:hover {
-        background-color: var(--bg-hover);
-        transform: scale(1.1);
-    }
-    
-    .logout-btn {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-        padding: var(--spacing-sm) var(--spacing-md);
-        background: transparent;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        color: var(--text-secondary);
-        font-size: var(--font-sm);
-        cursor: pointer;
-        transition: var(--transition-fast);
-        width: 100%;
-    }
-    
-    .logout-btn:hover {
-        background-color: var(--color-danger-light);
-        border-color: var(--color-danger);
-        color: var(--color-danger);
-    }
-    
     /* 主内容区 */
     .main-content {
         flex: 1;
@@ -337,9 +283,157 @@
         gap: var(--spacing-lg);
     }
     
-    .welcome-text {
+    /* 用户菜单样式 */
+    .user-menu-container {
+        position: relative;
+    }
+    
+    .user-menu-trigger {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+    
+    .user-menu-trigger:hover {
+        background: var(--bg-secondary);
+        border-color: var(--color-primary);
+    }
+    
+    .user-avatar-small {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-full);
+        background: linear-gradient(135deg, #4f46e5 0%, #10b981 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .user-name-small {
+        color: var(--text-primary);
+        font-size: var(--font-sm);
+        font-weight: 500;
+    }
+    
+    .dropdown-arrow {
+        color: var(--text-secondary);
+        font-size: 0.7rem;
+        margin-left: var(--spacing-xs);
+    }
+    
+    .user-menu-dropdown {
+        position: absolute;
+        top: calc(100% + var(--spacing-sm));
+        right: 0;
+        width: 280px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xl);
+        z-index: var(--z-dropdown);
+        overflow: hidden;
+        animation: slideDown 0.2s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .dropdown-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-lg);
+        background: var(--bg-tertiary);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .dropdown-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-full);
+        background: linear-gradient(135deg, #4f46e5 0%, #10b981 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    
+    .dropdown-info {
+        flex: 1;
+        overflow: hidden;
+    }
+    
+    .dropdown-username {
+        color: var(--text-primary);
+        font-size: var(--font-base);
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .dropdown-role {
         color: var(--text-secondary);
         font-size: var(--font-sm);
+        margin-top: 2px;
+    }
+    
+    .dropdown-divider {
+        height: 1px;
+        background: var(--border-color);
+    }
+    
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        width: 100%;
+        padding: var(--spacing-md) var(--spacing-lg);
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-size: var(--font-sm);
+        text-align: left;
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+    
+    .dropdown-item:hover {
+        background: var(--bg-tertiary);
+        color: var(--color-primary);
+    }
+    
+    .dropdown-item.logout {
+        color: var(--text-secondary);
+    }
+    
+    .dropdown-item.logout:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--color-danger);
+    }
+    
+    .dropdown-icon {
+        font-size: var(--font-base);
     }
     
     .content {
