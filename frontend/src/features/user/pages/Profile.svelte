@@ -114,7 +114,6 @@
             currentPassword = '';
             newPassword = '';
             confirmPassword = '';
-            showPasswordForm = false;
             
             // 退出登录
             setTimeout(() => {
@@ -223,43 +222,32 @@
                     </div>
                 </div>
 
-                <!-- 账户安全区域 -->
                 <div class="security-section">
-                    <h3 class="section-title">🔐 账户安全</h3>
-                    <div class="password-form">
-                        <div class="form-header">
-                            <h4>修改密码</h4>
-                            <p class="form-desc">定期修改密码可以保护您的账户安全</p>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="currentPassword">当前密码</label>
+                    <div class="password-form">                        
+                        <div class="password-inputs">
                             <input
                                 id="currentPassword"
                                 type="password"
                                 bind:value={currentPassword}
-                                placeholder="请输入当前密码"
+                                placeholder="当前密码"
+                                class="password-input"
                             />
-                        </div>
 
-                        <div class="form-group">
-                            <label for="newPassword">新密码</label>
                             <input
                                 id="newPassword"
                                 type="password"
                                 bind:value={newPassword}
-                                placeholder="请输入新密码（至少 6 位）"
-                                class={passwordError ? 'error' : ''}
+                                placeholder="新密码（至少 6 位）"
+                                class="password-input"
+                                class:error={passwordError}
                             />
-                        </div>
 
-                        <div class="form-group">
-                            <label for="confirmPassword">确认新密码</label>
                             <input
                                 id="confirmPassword"
                                 type="password"
                                 bind:value={confirmPassword}
-                                placeholder="请再次输入新密码"
+                                placeholder="确认新密码"
+                                class="password-input"
                             />
                         </div>
 
@@ -269,7 +257,7 @@
 
                         <div class="form-actions">
                             <button class="action-btn primary" on:click={handleChangePassword} disabled={isLoading}>
-                                {#if isLoading}保存中...{:else}保存新密码{/if}
+                                {#if isLoading}保存中...{:else}保存{/if}
                             </button>
                             <button class="action-btn outline" on:click={() => {
                                 passwordError = '';
@@ -277,7 +265,7 @@
                                 newPassword = '';
                                 confirmPassword = '';
                             }}>
-                                重置
+                                取消
                             </button>
                         </div>
                     </div>
@@ -555,62 +543,28 @@
     /* 账户安全区域 */
     .security-section {
         margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 2px solid var(--border-color);
     }
 
     .security-section .section-title {
         font-size: 1.1rem;
         font-weight: 600;
         color: var(--text-primary);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
 
     .password-form {
         max-width: 500px;
-        padding: 1.5rem;
-        background: var(--bg-primary);
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border-color-light);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
-    .password-form .form-header {
-        margin-bottom: 1.5rem;
+    .password-inputs {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
     }
 
-    .password-form .form-header h4 {
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-    }
-
-    .password-form .form-desc {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin: 0;
-    }
-
-    .password-form .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .password-form .form-group:last-child {
-        margin-bottom: 0;
-    }
-
-    .password-form .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-        color: var(--text-primary);
-        font-size: 0.9rem;
-    }
-
-    .password-form .form-group input {
+    .password-input {
         width: 100%;
-        padding: 0.625rem 0.875rem;
+        padding: 0.75rem 1rem;
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
         background: var(--bg-primary);
@@ -619,31 +573,30 @@
         transition: var(--transition-fast);
     }
 
-    .password-form .form-group input:hover {
+    .password-input:hover {
         border-color: var(--border-color-light);
     }
 
-    .password-form .form-group input:focus {
+    .password-input:focus {
         border-color: var(--color-primary);
         outline: none;
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
 
-    .password-form .form-group input.error {
+    .password-input.error {
         border-color: var(--color-danger);
     }
 
-    .password-form .error-message {
+    .error-message {
         color: var(--color-danger);
         font-size: 0.85rem;
         margin-top: 0.75rem;
-        margin-bottom: 1rem;
     }
 
     .password-form .form-actions {
         display: flex;
         gap: 0.75rem;
-        margin-top: 1.5rem;
+        margin-top: 1.25rem;
         padding-top: 1.25rem;
         border-top: 1px solid var(--border-color-light);
     }

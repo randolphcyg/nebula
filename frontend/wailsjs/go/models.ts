@@ -143,3 +143,52 @@ export namespace pcap {
 
 }
 
+export namespace zeek {
+	
+	export class AnalyzePCAPRequest {
+	    TaskID: string;
+	    UUID: string;
+	    OnlyNotice: boolean;
+	    PcapID: string;
+	    PcapPath: string;
+	    ScriptID: string;
+	    ScriptPath: string;
+	    ExtractedFilePath: string;
+	    ExtractedFileMinSize: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalyzePCAPRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.TaskID = source["TaskID"];
+	        this.UUID = source["UUID"];
+	        this.OnlyNotice = source["OnlyNotice"];
+	        this.PcapID = source["PcapID"];
+	        this.PcapPath = source["PcapPath"];
+	        this.ScriptID = source["ScriptID"];
+	        this.ScriptPath = source["ScriptPath"];
+	        this.ExtractedFilePath = source["ExtractedFilePath"];
+	        this.ExtractedFileMinSize = source["ExtractedFileMinSize"];
+	    }
+	}
+	export class AnalyzeResult {
+	    TaskID: string;
+	    Status: string;
+	    StartTime: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalyzeResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.TaskID = source["TaskID"];
+	        this.Status = source["Status"];
+	        this.StartTime = source["StartTime"];
+	    }
+	}
+
+}
+

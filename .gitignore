@@ -6,6 +6,10 @@ frontend/dist
 .idea/
 build/
 
+# 二进制文件
+nebula
+*.exe
+
 # 配置文件（包含敏感信息）
 config.yaml
 *.db

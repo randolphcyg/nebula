@@ -83,3 +83,26 @@ server:
   read_timeout: 30
   # 写入超时（秒）
   write_timeout: 30
+
+# Zeek Runner 服务配置
+zeek_runner:
+  # gRPC 服务地址
+  grpc_address: "localhost:50051"
+  # HTTP 服务地址
+  http_address: "http://localhost:8080"
+  # 请求超时时间（秒）
+  timeout: 30
+  # 是否启用 Zeek 服务（设为 false 可禁用）
+  enabled: true
+  
+  # 重试配置
+  retry:
+    max_attempts: 3
+    backoff_base_delay: 1
+    backoff_max_delay: 10
+  
+  # 连接池配置
+  pool:
+    max_idle_conns: 10
+    max_open_conns: 20
+    conn_max_lifetime: 1800

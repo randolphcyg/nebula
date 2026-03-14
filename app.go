@@ -5,10 +5,12 @@ import (
 	"fmt"
 
 	"nebula/internal/auth"
+	"nebula/internal/config"
 	"nebula/internal/database"
 	"nebula/internal/models"
 	"nebula/internal/services/analyzer"
 	"nebula/internal/services/pcap"
+	"nebula/internal/services/zeek"
 	"nebula/internal/utils"
 )
 
@@ -22,6 +24,7 @@ type App struct {
 	PermissionCheck *auth.PermissionChecker
 	AnalyzerService *analyzer.Service
 	PcapService     *pcap.Service
+	ZeekService     *zeek.Service
 	Crypto          *utils.Crypto
 }
 
@@ -76,6 +79,25 @@ func (a *App) startup(ctx context.Context) {
 	if err != nil {
 		fmt.Printf("加密工具初始化失败：%v\n", err)
 		return
+	}
+
+	// 8. 初始化 Zeek 服务
+	cfg := config.Get()
+	if cfg.ZeekRunner.IsEnabled() {
+		a.ZeekService, err = zeek.NewService(zeek.ServiceConfig{
+			GRPCAddress: cfg.ZeekRunner.GetGRPCAddress(),
+			HTTPAddress: cfg.ZeekRunner.GetHTTPAddress(),
+			Timeout:     cfg.ZeekRunner.GetTimeout(),
+		})
+		if err != nil {
+			fmt.Printf("⚠️  Zeek 服务初始化失败：%v (功能将被禁用)\n", err)
+			a.ZeekService = nil
+		} else {
+			fmt.Println("✅ Zeek 服务初始化成功")
+		}
+	} else {
+		fmt.Println("ℹ️  Zeek 服务未启用")
+		a.ZeekService = nil
 	}
 
 	fmt.Println("NEBULA 系统初始化完成")
@@ -392,4 +414,113 @@ func (a *App) ChangePassword(token, oldPassword, newPassword string) error {
 	}
 
 	return a.AuthService.ChangePassword(claims.UserID, oldPassword, newPassword)
+}
+
+// ============================
+// Zeek Runner
+// ============================
+
+// IsZeekEnabled 检查 Zeek 服务是否已启用
+func (a *App) IsZeekEnabled() bool {
+	return a.ZeekService != nil
+}
+
+// GetZeekVersion 获取 Zeek 版本（HTTP 接口）
+func (a *App) GetZeekVersion() (string, error) {
+	if a.ZeekService == nil {
+		return "", fmt.Errorf("Zeek 服务未启用")
+	}
+
+	ctx := context.Background()
+	version, err := a.ZeekService.GetZeekVersion(ctx)
+	if err != nil {
+		return "", fmt.Errorf("获取 Zeek 版本失败：%w", err)
+	}
+
+	return version, nil
+}
+
+// CheckZeekHealth 检查 Zeek 服务健康状态（HTTP 接口）
+func (a *App) CheckZeekHealth() (map[string]interface{}, error) {
+	if a.ZeekService == nil {
+		return nil, fmt.Errorf("Zeek 服务未启用")
+	}
+
+	ctx := context.Background()
+	health, err := a.ZeekService.CheckHealth(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("健康检查失败：%w", err)
+	}
+
+	return map[string]interface{}{
+		"status":       health.Status,
+		"pool_running": health.PoolRunning,
+		"is_healthy":   health.IsHealthy(),
+		"message":      health.GetStatusMessage(),
+	}, nil
+}
+
+// AnalyzePCAP 分析 PCAP 文件（gRPC 优先，失败降级到 HTTP）
+func (a *App) AnalyzePCAP(req zeek.AnalyzePCAPRequest) (*zeek.AnalyzeResult, error) {
+	if a.ZeekService == nil {
+		return nil, fmt.Errorf("Zeek 服务未启用")
+	}
+
+	// 验证请求
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("请求验证失败：%w", err)
+	}
+
+	ctx := context.Background()
+	result, err := a.ZeekService.AnalyzePCAP(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("分析失败：%w", err)
+	}
+
+	return result, nil
+}
+
+// GetZeekVersions 获取 Zeek 和 Zeek-Kafka 版本（HTTP 接口）
+func (a *App) GetZeekVersions() (map[string]interface{}, error) {
+	if a.ZeekService == nil {
+		return map[string]interface{}{
+			"zeek_version":       "N/A",
+			"zeek_kafka_version": "N/A",
+			"component_status":   "disabled",
+			"message":            "Zeek 服务未启用",
+		}, nil
+	}
+
+	ctx := context.Background()
+
+	// 获取版本信息
+	versions, err := a.ZeekService.GetVersions(ctx)
+	if err != nil {
+		return map[string]interface{}{
+			"zeek_version":       "未知",
+			"zeek_kafka_version": "未知",
+			"component_status":   "error",
+			"message":            fmt.Sprintf("获取版本失败：%v", err),
+		}, nil
+	}
+
+	// 获取健康状态
+	health, err := a.ZeekService.CheckHealth(ctx)
+	if err != nil {
+		return map[string]interface{}{
+			"zeek_version":       versions.ZeekVersion,
+			"zeek_kafka_version": versions.ZeekKafkaVersion,
+			"component_status":   "error",
+			"message":            fmt.Sprintf("健康检查失败：%v", err),
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"zeek_version":       versions.ZeekVersion,
+		"zeek_kafka_version": versions.ZeekKafkaVersion,
+		"component_status":   health.Status,
+		"pool_running":       health.PoolRunning,
+		"is_healthy":         health.IsHealthy(),
+		"message":            health.GetStatusMessage(),
+	}, nil
 }

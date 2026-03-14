@@ -150,6 +150,7 @@
         flex-direction: column;
         position: relative;
         background-color: var(--bg-primary);
+        padding: 1.5rem;
     }
 
     .filter-panel {
@@ -193,10 +194,52 @@
     .table-wrapper::-webkit-scrollbar-thumb:hover {
         background: var(--border-color-light);
     }
-    .data-table { width: 100%; min-width: 800px; border-collapse: collapse; text-align: left; font-size: 0.85rem; table-layout: fixed; }
-    .data-table th { position: sticky; top: 0; background: var(--bg-tertiary); padding: 12px; z-index: 10; color: var(--text-primary); }
-    .data-table td { padding: 12px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
-    .data-table tbody tr:hover { background: var(--bg-tertiary); }
+    .data-table {
+        width: 100%;
+        min-width: 800px;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.85rem;
+        table-layout: fixed;
+    }
+
+    .data-table thead {
+        background: var(--bg-tertiary);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table th {
+        position: sticky;
+        top: 0;
+        background: var(--bg-tertiary);
+        padding: 12px;
+        z-index: 10;
+        color: var(--text-primary);
+        font-weight: 600;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-secondary);
+    }
+
+    .data-table tbody tr:hover {
+        background: var(--bg-tertiary);
+    }
+
+    .data-table input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--color-primary);
+    }
+
+    .data-table th input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
 
     .sticky-col-header { position: sticky !important; right: 0; z-index: 20 !important; background: var(--bg-tertiary); box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1); }
     .sticky-col-body { position: sticky; right: 0; z-index: 2; background: var(--bg-secondary); box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1); }

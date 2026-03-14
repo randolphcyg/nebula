@@ -54,7 +54,6 @@
         let encryptedPassword: string;
         try {
             encryptedPassword = encryptPassword(password);
-            console.log('✅ 密码已加密');
         } catch (err: any) {
             error = err.message;
             return;

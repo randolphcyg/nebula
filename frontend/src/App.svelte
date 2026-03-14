@@ -11,7 +11,8 @@
     import Workspace from './features/workspace/Workspace.svelte';
     import PcapList from './features/analyzer/pages/PcapList.svelte';
     import UserManagement from './features/admin/pages/UserManagement.svelte';
-    import { GetFileList, GetWiresharkVersion } from '../wailsjs/go/main/App';
+    import Profile from './features/user/pages/Profile.svelte';
+    import { GetFileList, GetWiresharkVersion, GetZeekVersions, IsZeekEnabled } from '../wailsjs/go/main/App';
     
     let isAuthenticated = false;
     let activeTab = 'home';
@@ -31,6 +32,7 @@
         pcapCount: 0,
         wsVersion: "探测中...",
         zeekVersion: "待检测",
+        zeekKafkaVersion: "待检测",
         zeekScripts: 142,
         aiModel: "待配置",
         aiTokens: "1.2M",
@@ -66,12 +68,44 @@
 
         // 2. 获取 wireshark 引擎版本
         try {
-            const wsRespStr = await GetWiresharkVersion();
-            const wsObj = JSON.parse(wsRespStr);
-            dashStats.wsVersion = wsObj.version || "版本未知";
+            const wsVersion = await GetWiresharkVersion();
+            // GetWiresharkVersion 直接返回版本字符串，不是 JSON
+            dashStats.wsVersion = wsVersion || "版本未知";
         } catch(e) {
             dashStats.wsVersion = "引擎离线";
             logger.error("大屏获取 Wireshark 版本失败:", e);
+        }
+        
+        // 3. 获取 Zeek 引擎和 Zeek-Kafka 版本
+        try {
+            const isEnabled = await IsZeekEnabled();
+            logger.debug("Zeek 服务是否启用:", isEnabled);
+            
+            if (isEnabled) {
+                const zeekData = await GetZeekVersions();
+                logger.debug("Zeek 版本数据:", zeekData);
+                
+                // 确保字段存在且不是 HTML
+                const zeekVer = zeekData.zeek_version;
+                const zeekKafkaVer = zeekData.zeek_kafka_version;
+                
+                // 检查是否是 HTML 响应（错误情况）
+                if (typeof zeekVer === 'string' && zeekVer.startsWith('<!doctype')) {
+                    logger.error("Zeek 版本返回了 HTML 而不是纯文本");
+                    dashStats.zeekVersion = "版本获取失败";
+                    dashStats.zeekKafkaVersion = "-";
+                } else {
+                    dashStats.zeekVersion = zeekVer || "版本未知";
+                    dashStats.zeekKafkaVersion = zeekKafkaVer || "版本未知";
+                }
+            } else {
+                dashStats.zeekVersion = "服务未启用";
+                dashStats.zeekKafkaVersion = "-";
+            }
+        } catch(e) {
+            dashStats.zeekVersion = "引擎离线";
+            dashStats.zeekKafkaVersion = "-";
+            logger.error("大屏获取 Zeek 版本失败:", e);
         }
     }
     
@@ -145,7 +179,16 @@
                             <div class="card-icon zeek-icon">🛡️</div>
                             <div class="card-content">
                                 <div class="card-label">Zeek 威胁感知引擎</div>
-                                <div class="card-value">{dashStats.zeekVersion}</div>
+                                <div class="card-value zeek-versions">
+                                    <div class="version-row">
+                                        <span class="version-label">Zeek:</span>
+                                        <span class="version-value">{dashStats.zeekVersion}</span>
+                                    </div>
+                                    <div class="version-row">
+                                        <span class="version-label">Zeek-Kafka:</span>
+                                        <span class="version-value">{dashStats.zeekKafkaVersion}</span>
+                                    </div>
+                                </div>
                                 <div class="card-sub">已加载特征脚本：<span class="highlight">{dashStats.zeekScripts}</span> 个</div>
                             </div>
                         </div>
@@ -176,7 +219,7 @@
                 <Workspace />
             {:else if activeTab === 'profile'}
                 <!-- 个人中心 -->
-                <Workspace />
+                <Profile />
             {:else if activeTab === 'users'}
                 <!-- 用户管理（管理员功能） -->
                 {#if user && user.roleCode === 'admin'}
@@ -234,6 +277,7 @@
         flex-direction: column;
         height: 100%;
         gap: 24px;
+        padding: 1.5rem;
         animation: fadeIn 0.5s ease-out;
     }
     
@@ -348,6 +392,33 @@
     
     .card-value.text-glow {
         text-shadow: 0 0 20px rgba(79, 70, 229, 0.5);
+    }
+    
+    .card-value.zeek-versions {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: var(--font-xl);
+    }
+    
+    .card-value .version-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .card-value .version-label {
+        font-size: var(--font-sm);
+        font-weight: 600;
+        color: var(--text-secondary);
+        min-width: 50px;
+    }
+    
+    .card-value .version-value {
+        font-size: var(--font-lg);
+        font-weight: 700;
+        color: var(--color-primary);
+        font-family: var(--font-mono);
     }
     
     .card-value .unit {

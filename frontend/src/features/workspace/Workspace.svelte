@@ -2,13 +2,11 @@
     import PcapList from '../analyzer/pages/PcapList.svelte';
     import PcapDetail from '../analyzer/pages/PcapDetail.svelte';
     import InterfaceList from '../analyzer/pages/InterfaceList.svelte';
-    import Profile from '../user/pages/Profile.svelte';
     import { info as showInfo } from '../../stores/toast';
     import { onMount, createEventDispatcher } from 'svelte';
     import { app } from '../../stores/app';
 
-    let currentView: 'dashboard' | 'pcap-list' | 'pcap-detail' | 'live' | 'auto' | 'profile' = 'dashboard';
-    let activeTab = 'home';
+    let currentView: 'dashboard' | 'pcap-list' | 'pcap-detail' | 'live' | 'auto' = 'dashboard';
     
     const dispatch = createEventDispatcher();
 
@@ -17,14 +15,7 @@
 
     // 订阅当前激活的 tab
     app.subscribe(state => {
-        activeTab = state.activeTab;
-        // 当切换到 profile tab 时，显示个人中心视图
-        if (activeTab === 'profile') {
-            currentView = 'profile';
-        } else if (activeTab === 'analyzer' && currentView === 'profile') {
-            // 从 profile 切换到 analyzer 时，回到 dashboard
-            currentView = 'dashboard';
-        }
+        // Workspace 只处理 analyzer tab 的内容
     });
 
     // 监听全局 analyze 事件
@@ -62,13 +53,7 @@
 
     function navigateTo(viewId: any) {
         currentView = viewId;
-        if (viewId === 'profile') {
-            // 个人中心直接显示，不切换 tab
-            // tab 已经在 Sidebar 中处理
-        } else {
-            // 其他功能保持 analyzer 标签激活
-            dispatch('tabChange', 'analyzer');
-        }
+        dispatch('tabChange', 'analyzer');
     }
 
     function handleAnalyze(event: CustomEvent) {
@@ -85,40 +70,50 @@
 <div class="hub-container">
     {#if currentView === 'dashboard'}
         <div class="dashboard">
-            <div class="grid">
-                {#each features as feature}
-                    <div class="card" role="button" tabindex="0"
-                         on:click={() => navigateTo(feature.id)}
-                         on:keydown={(e) => e.key === 'Enter' && navigateTo(feature.id)}>
-                        <div class="card-header">
-                            <span class="icon">{feature.icon}</span>
-                            <span class={`badge ${feature.status.toLowerCase()}`}>{feature.status}</span>
+            <div class="section">
+                <div class="grid">
+                    {#each features as feature}
+                        <div class="card" role="button" tabindex="0"
+                             on:click={() => navigateTo(feature.id)}
+                             on:keydown={(e) => e.key === 'Enter' && navigateTo(feature.id)}>
+                            <div class="card-header">
+                                <span class="icon">{feature.icon}</span>
+                                <span class={`badge ${feature.status.toLowerCase()}`}>{feature.status}</span>
+                            </div>
+                            <h3>{feature.title}</h3>
+                            <p>{feature.desc}</p>
                         </div>
-                        <h3>{feature.title}</h3>
-                        <p>{feature.desc}</p>
-                    </div>
-                {/each}
+                    {/each}
+                </div>
             </div>
         </div>
 
     {:else}
         <div class="sub-page">
             <div class="sub-header">
-                {#if currentView === 'pcap-list'}
-                    <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
-                    <span class="title">离线流量包列表</span>
-                {:else if currentView === 'pcap-detail'}
-                    <button class="back-btn" on:click={() => navigateTo('pcap-list')}>← 返回文件列表</button>
-                    <span class="title">正在分析：<strong class="highlight">{selectedFile?.fileName}</strong></span>
-                {:else if currentView === 'live'}
-                    <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
-                    <span class="title">网卡列表</span>
-                {:else if currentView === 'profile'}
-                    <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
-                    <span class="title">个人中心</span>
-                {:else}
-                    <button class="back-btn" on:click={() => navigateTo('dashboard')}>← 返回工作台</button>
-                {/if}
+                <div class="breadcrumb">
+                    <a class="breadcrumb-item" on:click={() => navigateTo('dashboard')}>
+                        <span class="breadcrumb-icon">🏠</span>
+                        工作台
+                    </a>
+                    
+                    {#if currentView === 'pcap-detail'}
+                        <span class="breadcrumb-separator">/</span>
+                        <a class="breadcrumb-item" on:click={() => navigateTo('pcap-list')}>
+                            PCAP 列表
+                        </a>
+                        <span class="breadcrumb-separator">/</span>
+                        <span class="breadcrumb-item active">
+                            {selectedFile?.fileName}
+                        </span>
+                    {:else if currentView === 'pcap-list'}
+                        <span class="breadcrumb-separator">/</span>
+                        <span class="breadcrumb-item active">PCAP 列表</span>
+                    {:else if currentView === 'live'}
+                        <span class="breadcrumb-separator">/</span>
+                        <span class="breadcrumb-item active">网卡列表</span>
+                    {/if}
+                </div>
             </div>
 
             <div class="sub-content">
@@ -128,8 +123,6 @@
                     <PcapDetail file={selectedFile}/>
                 {:else if currentView === 'live'}
                     <InterfaceList on:capture={handleStartCapture} />
-                {:else if currentView === 'profile'}
-                    <Profile />
                 {:else}
                     <div class="wip"><h2>模块正在开发接入中...</h2></div>
                 {/if}
@@ -147,7 +140,22 @@
     }
 
     .dashboard {
-        padding: 1rem;
+        padding: 1.5rem;
+        overflow-y: auto;
+    }
+
+    .section {
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .grid {
@@ -223,28 +231,52 @@
     .sub-header {
         display: flex;
         align-items: center;
-        gap: 1rem;
         padding: 0 0 12px 0;
         border-bottom: 1px solid var(--border-color);
         margin-bottom: 12px;
-        color: var(--text-primary);
-        font-weight: bold;
     }
 
-    .back-btn {
-        background: transparent;
-        border: 1px solid var(--border-color);
+    /* 面包屑导航样式 */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+    }
+
+    .breadcrumb-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         color: var(--text-secondary);
-        padding: 6px 14px;
-        border-radius: 6px;
         cursor: pointer;
-        transition: 0.2s;
-        font-size: 0.9rem;
+        transition: var(--transition-fast);
+        padding: 4px 8px;
+        border-radius: 4px;
     }
 
-    .back-btn:hover {
+    .breadcrumb-item:hover {
         background: var(--bg-tertiary);
+        color: var(--color-primary);
+    }
+
+    .breadcrumb-item.active {
         color: var(--text-primary);
+        font-weight: 600;
+        cursor: default;
+    }
+
+    .breadcrumb-item.active:hover {
+        background: transparent;
+    }
+
+    .breadcrumb-icon {
+        font-size: 1rem;
+    }
+
+    .breadcrumb-separator {
+        color: var(--text-tertiary);
+        font-size: 0.875rem;
     }
 
     .title {

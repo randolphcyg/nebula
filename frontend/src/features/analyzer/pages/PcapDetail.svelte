@@ -434,6 +434,7 @@
         flex-direction: column;
         height: 100%;
         gap: 20px;
+        padding: 1.5rem;
         padding-bottom: 24px;
         overflow-y: auto;
         padding-right: 8px;

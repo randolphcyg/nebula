@@ -51,7 +51,12 @@
     let allUsers: User[] = [];
     let isLoading = false;
     let searchKeyword = '';
-    let selectedUsers: Set<number> = new Set();
+    let selectedUserIds: number[] = [];
+    
+    // 响应式计算
+    $: isAllSelected = users.length > 0 && selectedUserIds.length === users.length;
+    $: hasSelectedUsers = selectedUserIds.length > 0;
+    
     let showAuditLogs = false;
     let auditLogs: AuditLog[] = [];
     let showRoleModal = false;
@@ -75,7 +80,6 @@
         try {
             const result = await GetAllRoles();
             roles = result as Role[];
-            logger.debug('角色列表加载成功');
         } catch (err: any) {
             logger.error('加载角色失败:', err);
             showError('加载角色列表失败');
@@ -94,7 +98,6 @@
                 currentUserId = user.id;
             }
             applyFilters();
-            logger.debug('用户列表加载成功，共', allUsers.length, '人');
         } catch (err: any) {
             logger.error('加载用户失败:', err);
             showError('加载用户列表失败');
@@ -186,21 +189,21 @@
 
     // 批量审核
     async function batchApprove(status: number) {
-        if (selectedUsers.size === 0) {
+        if (selectedUserIds.length === 0) {
             showError('请先选择用户');
             return;
         }
 
-        if (!confirm(`确定要${status === 1 ? '通过' : '拒绝'}选中的 ${selectedUsers.size} 个用户吗？`)) {
+        if (!confirm(`确定要${status === 1 ? '通过' : '拒绝'}选中的 ${selectedUserIds.length} 个用户吗？`)) {
             return;
         }
 
         try {
             const token = auth.getToken();
-            await BatchUpdateUserStatus(Array.from(selectedUsers), status, token);
+            await BatchUpdateUserStatus(selectedUserIds, status, token);
             const statusText = status === 1 ? '通过' : '拒绝';
             showSuccess(`批量${statusText}成功！`);
-            selectedUsers.clear();
+            selectedUserIds = [];
             await loadUsers();
         } catch (err: any) {
             logger.error('批量审核失败:', err);
@@ -208,22 +211,83 @@
         }
     }
 
+    // 批量删除
+    async function batchDelete() {
+        if (selectedUserIds.length === 0) {
+            showError('请先选择用户');
+            return;
+        }
+
+        try {
+            const token = auth.getToken();
+            
+            // 逐个删除
+            for (const userId of selectedUserIds) {
+                await DeleteUser(userId, token);
+            }
+            
+            showSuccess(`批量删除 ${selectedUserIds.length} 个用户成功！`);
+            selectedUserIds = [];
+            await loadUsers();
+        } catch (err: any) {
+            logger.error('批量删除失败:', err);
+            showError(`批量删除失败：${err.message}`);
+        }
+    }
+
+    // 批量禁用
+    async function batchDisable() {
+        if (selectedUserIds.length === 0) {
+            showError('请先选择用户');
+            return;
+        }
+
+        try {
+            const token = auth.getToken();
+            await BatchUpdateUserStatus(selectedUserIds, UserStatus.Disabled, token);
+            showSuccess(`批量禁用 ${selectedUserIds.length} 个用户成功！`);
+            selectedUserIds = [];
+            await loadUsers();
+        } catch (err: any) {
+            logger.error('批量禁用失败:', err);
+            showError(`批量禁用失败：${err.message}`);
+        }
+    }
+
+    // 批量启用
+    async function batchEnable() {
+        if (selectedUserIds.length === 0) {
+            showError('请先选择用户');
+            return;
+        }
+
+        try {
+            const token = auth.getToken();
+            await BatchUpdateUserStatus(selectedUserIds, UserStatus.Active, token);
+            showSuccess(`批量启用 ${selectedUserIds.length} 个用户成功！`);
+            selectedUserIds = [];
+            await loadUsers();
+        } catch (err: any) {
+            logger.error('批量启用失败:', err);
+            showError(`批量启用失败：${err.message}`);
+        }
+    }
+
     // 切换选择
     function toggleSelection(userId: number) {
-        if (selectedUsers.has(userId)) {
-            selectedUsers.delete(userId);
+        const index = selectedUserIds.indexOf(userId);
+        if (index > -1) {
+            selectedUserIds.splice(index, 1);
         } else {
-            selectedUsers.add(userId);
+            selectedUserIds.push(userId);
         }
+        // 强制触发响应式更新
+        selectedUserIds = selectedUserIds;
     }
 
     // 全选/取消全选
     function toggleSelectAll() {
-        if (selectedUsers.size === users.length) {
-            selectedUsers.clear();
-        } else {
-            users.forEach(u => selectedUsers.add(u.id));
-        }
+        selectedUserIds = isAllSelected ? [] : users.map(u => u.id);
     }
 
     // 加载审核日志
@@ -344,69 +408,106 @@
 </script>
 
 <div class="user-management">
-    <div class="page-header">
-        <div>
-            <h1>👥 用户管理</h1>
-            <p>管理用户账户，审核新用户</p>
-        </div>
-        <button class="btn-log" on:click={loadAuditLogs}>
-            📋 审核日志
-        </button>
-    </div>
-
     <!-- 工具栏 -->
     <div class="toolbar">
-        <div class="search-box">
-            <input 
-                type="text" 
-                placeholder="搜索用户名或邮箱..."
-                value={searchKeyword}
-                on:keydown={(e) => e.key === 'Enter' && handleSearch()}
-                on:input={handleSearchInput}
-            />
-            <button class="btn-search" on:click={handleSearch}>搜索</button>
-            <button class="btn-clear" on:click={() => { searchKeyword = ''; loadUsers(); }}>清空</button>
-        </div>
+        <div class="toolbar-left">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    placeholder="搜索用户名或邮箱..."
+                    value={searchKeyword}
+                    on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+                    on:input={handleSearchInput}
+                />
+                <button class="btn-search" on:click={handleSearch}>搜索</button>
+                <button class="btn-clear" on:click={() => { searchKeyword = ''; loadUsers(); }}>清空</button>
+            </div>
 
-        <div class="filter-buttons">
-            <button 
-                class:active={filter === 'all'} 
-                on:click={() => { filter = 'all'; applyFilters(); }}
-            >
-                全部 ({allUsers.length})
-            </button>
-            <button 
-                class:active={filter === 'pending'} 
-                on:click={() => { filter = 'pending'; applyFilters(); }}
-            >
-                待审核 ({allUsers.filter(u => u.status === 0).length})
-            </button>
-            <button 
-                class:active={filter === 'active'} 
-                on:click={() => { filter = 'active'; applyFilters(); }}
-            >
-                正常 ({allUsers.filter(u => u.status === 1).length})
-            </button>
-            <button 
-                class:active={filter === 'disabled'} 
-                on:click={() => { filter = 'disabled'; applyFilters(); }}
-            >
-                禁用 ({allUsers.filter(u => u.status === 2).length})
-            </button>
-        </div>
-        
-        {#if selectedUsers.size > 0}
-            <div class="batch-actions">
-                <span class="selected-count">已选择 {selectedUsers.size} 个用户</span>
-                <button class="btn-batch-approve" on:click={() => batchApprove(1)}>
-                    ✅ 批量通过
+            <div class="filter-buttons">
+                <button 
+                    class:active={filter === 'all'} 
+                    on:click={() => { filter = 'all'; applyFilters(); }}
+                >
+                    全部 ({allUsers.length})
                 </button>
-                <button class="btn-batch-reject" on:click={() => batchApprove(2)}>
-                    🚫 批量拒绝
+                <button 
+                    class:active={filter === 'pending'} 
+                    on:click={() => { filter = 'pending'; applyFilters(); }}
+                >
+                    待审核 ({allUsers.filter(u => u.status === 0).length})
+                </button>
+                <button 
+                    class:active={filter === 'active'} 
+                    on:click={() => { filter = 'active'; applyFilters(); }}
+                >
+                    正常 ({allUsers.filter(u => u.status === 1).length})
+                </button>
+                <button 
+                    class:active={filter === 'disabled'} 
+                    on:click={() => { filter = 'disabled'; applyFilters(); }}
+                >
+                    禁用 ({allUsers.filter(u => u.status === 2).length})
                 </button>
             </div>
-        {/if}
+        </div>
+        
+        <div class="toolbar-right">
+            <button class="btn-log" on:click={loadAuditLogs}>
+                📋 审核日志
+            </button>
+        </div>
     </div>
+
+    <!-- 批量操作栏 -->
+    {#if hasSelectedUsers}
+        {@const selectedUsersList = allUsers.filter(u => selectedUserIds.includes(u.id))}
+        {@const hasPending = selectedUsersList.some(u => u.status === UserStatus.Pending)}
+        {@const hasActive = selectedUsersList.some(u => u.status === UserStatus.Active)}
+        {@const hasDisabled = selectedUsersList.some(u => u.status === UserStatus.Disabled)}
+        {@const hasSuperAdmin = selectedUsersList.some(u => u.roleCode === 'admin')}
+        
+        <div class="batch-bar">
+            <span class="selected-count">已选择 {selectedUserIds.length} 个用户</span>
+            <div class="batch-actions">
+                {#if hasSuperAdmin}
+                    <!-- 选中了超级管理员：显示警告，不显示任何操作按钮 -->
+                    <span class="warning-text" style="color: #f59e0b;">⚠️ 包含超级管理员，无法执行批量操作</span>
+                {:else}
+                    <!-- 不包含超级管理员：根据状态显示操作按钮 -->
+                    {#if hasPending && !hasActive && !hasDisabled}
+                        <!-- 只选中了待审核用户 -->
+                        <button class="btn-batch-approve" on:click={() => batchApprove(1)}>
+                            ✅ 批量通过
+                        </button>
+                        <button class="btn-batch-reject" on:click={() => batchApprove(2)}>
+                            🚫 批量拒绝
+                        </button>
+                    {:else if !hasPending && hasActive && !hasDisabled}
+                        <!-- 只选中了正常用户 -->
+                        <button class="btn-batch-disable" on:click={() => batchDisable()}>
+                            ⛔ 批量禁用
+                        </button>
+                        <button class="btn-batch-delete" on:click={() => batchDelete()}>
+                            🗑️ 批量删除
+                        </button>
+                    {:else if !hasPending && !hasActive && hasDisabled}
+                        <!-- 只选中了禁用用户 -->
+                        <button class="btn-batch-enable" on:click={() => batchEnable()}>
+                            ✅ 批量启用
+                        </button>
+                        <button class="btn-batch-delete" on:click={() => batchDelete()}>
+                            🗑️ 批量删除
+                        </button>
+                    {:else}
+                        <!-- 混合状态：只显示删除按钮 -->
+                        <button class="btn-batch-delete" on:click={() => batchDelete()}>
+                            🗑️ 批量删除
+                        </button>
+                    {/if}
+                {/if}
+            </div>
+        </div>
+    {/if}
 
     <!-- 用户列表 -->
     <div class="user-list-container">
@@ -420,11 +521,10 @@
                             <th>
                                 <input 
                                     type="checkbox" 
-                                    checked={users.length > 0 && selectedUsers.size === users.length}
+                                    checked={isAllSelected}
                                     on:change={toggleSelectAll}
                                 />
                             </th>
-                            <th>ID</th>
                             <th>用户名</th>
                             <th>邮箱</th>
                             <th>角色</th>
@@ -436,15 +536,17 @@
                     </thead>
                     <tbody>
                         {#each users as user}
-                            <tr>
+                            <tr 
+                                class:selected={selectedUserIds.includes(user.id)}
+                                on:click={() => toggleSelection(user.id)}
+                            >
                                 <td>
                                     <input 
                                         type="checkbox"
-                                        checked={selectedUsers.has(user.id)}
+                                        checked={selectedUserIds.includes(user.id)}
                                         on:change={() => toggleSelection(user.id)}
                                     />
                                 </td>
-                                <td>#{user.id}</td>
                                 <td>
                                     <div class="user-name">
                                         <span class="avatar">{user.username.charAt(0).toUpperCase()}</span>
@@ -614,7 +716,7 @@
 
 <style>
     .user-management {
-        padding: 2rem;
+        padding: 1.5rem;
         max-width: 1400px;
         margin: 0 auto;
     }
@@ -658,14 +760,28 @@
     /* 工具栏 */
     .toolbar {
         display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .toolbar-left {
+        display: flex;
         flex-direction: column;
         gap: 1rem;
-        margin-bottom: 1.5rem;
+        flex: 1;
+    }
+
+    .toolbar-right {
+        display: flex;
+        align-items: center;
     }
 
     .search-box {
         display: flex;
         gap: 0.5rem;
+        max-width: 500px;
     }
 
     .search-box input {
@@ -729,6 +845,32 @@
         border: 1px solid var(--border-color);
     }
 
+    /* 批量操作栏 */
+    .batch-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+
+    .batch-bar .selected-count {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .batch-bar .batch-actions {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0;
+        background: transparent;
+        border: none;
+    }
+
     .selected-count {
         font-size: 0.875rem;
         color: var(--text-secondary);
@@ -765,6 +907,57 @@
         color: white;
     }
 
+    .btn-batch-delete {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition-fast);
+        background: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+    }
+
+    .btn-batch-delete:hover {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-batch-disable {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition-fast);
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .btn-batch-disable:hover {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-batch-enable {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition-fast);
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .btn-batch-enable:hover {
+        background: #10b981;
+        color: white;
+    }
+
     /* 表格 */
     .user-list-container {
         background: var(--bg-secondary);
@@ -788,6 +981,7 @@
         width: 100%;
         border-collapse: collapse;
         min-width: 1200px;
+        font-size: 0.875rem;
     }
 
     .user-table thead {
@@ -796,22 +990,40 @@
     }
 
     .user-table th {
-        padding: 1rem;
+        padding: 12px;
         text-align: left;
         font-size: 0.875rem;
         font-weight: 600;
         color: var(--text-primary);
     }
 
+    /* 复选框样式优化 */
+    .user-table input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--color-primary);
+    }
+
+    .user-table th input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+
     .user-table td {
-        padding: 1rem;
-        border-top: 1px solid var(--border-color);
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color);
         font-size: 0.875rem;
-        color: var(--text-primary);
+        color: var(--text-secondary);
     }
 
     .user-table tbody tr:hover {
         background: var(--bg-tertiary);
+    }
+
+    .user-table tbody tr.selected {
+        background: rgba(59, 130, 246, 0.1);
+        border-left: 3px solid var(--color-primary);
     }
 
     /* 用户名列 */

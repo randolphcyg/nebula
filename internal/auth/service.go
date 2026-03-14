@@ -2,6 +2,8 @@ package auth
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"regexp"
 	"time"
 
@@ -330,14 +332,36 @@ func (s *Service) UpdateUserStatus(userID int, status int, operatorID uint, oper
 
 // BatchUpdateUserStatus 批量更新用户状态
 func (s *Service) BatchUpdateUserStatus(userIDs []int, status int, operatorID uint, operator string) error {
+	// 获取操作者信息
+	var operatorUser models.User
+	if err := s.db.Preload("Role").First(&operatorUser, operatorID).Error; err != nil {
+		return fmt.Errorf("获取操作者信息失败：%v", err)
+	}
+
+	// 检查操作者是否为超级管理员
+	if operatorUser.Role.Code != "admin" {
+		return fmt.Errorf("只有超级管理员才能执行批量操作")
+	}
+
+	// 检查是否包含超级管理员用户
+	var targetUsers []models.User
+	if err := s.db.Where("id IN ?", userIDs).Preload("Role").Find(&targetUsers).Error; err != nil {
+		return err
+	}
+
+	for _, user := range targetUsers {
+		if user.Role.Code == "admin" {
+			return fmt.Errorf("不能对超级管理员用户执行此操作")
+		}
+	}
+
 	// 批量更新
 	if err := s.db.Model(&models.User{}).Where("id IN ?", userIDs).Update("status", status).Error; err != nil {
 		return err
 	}
 
 	// 获取用户信息用于日志
-	var users []models.User
-	if err := s.db.Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+	if err := s.db.Where("id IN ?", userIDs).Find(&targetUsers).Error; err != nil {
 		return err
 	}
 
@@ -350,8 +374,8 @@ func (s *Service) BatchUpdateUserStatus(userIDs []int, status int, operatorID ui
 		action = "batch_reject"
 	}
 
-	logs := make([]models.AuditLog, 0, len(users))
-	for _, user := range users {
+	logs := make([]models.AuditLog, 0, len(targetUsers))
+	for _, user := range targetUsers {
 		logs = append(logs, models.AuditLog{
 			UserID:     user.ID,
 			Username:   user.Username,
@@ -363,7 +387,11 @@ func (s *Service) BatchUpdateUserStatus(userIDs []int, status int, operatorID ui
 		})
 	}
 
-	return s.db.Create(&logs).Error
+	if err := s.db.Create(&logs).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetAuditLogs 获取审核日志
@@ -430,9 +458,31 @@ func (s *Service) UpdateUserProfile(userID int, email string, operatorID uint, o
 
 // DeleteUser 删除用户
 func (s *Service) DeleteUser(userID int, operatorID uint, operator string) error {
+	log.Printf("[删除用户] 开始执行删除操作，操作者：%s (ID: %d), 目标用户 ID: %d",
+		operator, operatorID, userID)
+
+	// 获取操作者信息
+	var operatorUser models.User
+	if err := s.db.Preload("Role").First(&operatorUser, operatorID).Error; err != nil {
+		log.Printf("[删除用户] 获取操作者信息失败：%v", err)
+		return fmt.Errorf("获取操作者信息失败：%v", err)
+	}
+
+	log.Printf("[删除用户] 操作者角色：%s", operatorUser.Role.Code)
+
+	// 检查操作者是否为超级管理员
+	if operatorUser.Role.Code != "admin" {
+		return fmt.Errorf("只有超级管理员才能删除用户")
+	}
+
 	var user models.User
-	if err := s.db.First(&user, userID).Error; err != nil {
+	if err := s.db.Preload("Role").First(&user, userID).Error; err != nil {
 		return err
+	}
+
+	// 不能删除超级管理员
+	if user.Role.Code == "admin" {
+		return fmt.Errorf("不能删除超级管理员用户")
 	}
 
 	// 记录审核日志
@@ -448,5 +498,9 @@ func (s *Service) DeleteUser(userID int, operatorID uint, operator string) error
 	}
 
 	// 删除用户
-	return s.db.Delete(&user).Error
+	if err := s.db.Delete(&user).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

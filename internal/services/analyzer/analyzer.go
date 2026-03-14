@@ -29,7 +29,16 @@ func (s *Service) GetWiresharkVersion() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(respData), nil
+
+	var data struct {
+		Version string `json:"version"`
+	}
+
+	if err := json.Unmarshal(respData, &data); err != nil {
+		return "", fmt.Errorf("解析版本信息失败：%w", err)
+	}
+
+	return data.Version, nil
 }
 
 func (s *Service) GetPacketsByPage(fileName string, page int, size int, bpfFilter string) (string, error) {

@@ -16,13 +16,14 @@ var (
 
 // Config 应用配置
 type Config struct {
-	App       AppConfig       `yaml:"app"`
-	Wireshark WiresharkConfig `yaml:"wireshark"`
-	Database  DatabaseConfig  `yaml:"database"`
-	Auth      AuthConfig      `yaml:"auth"`
-	Log       LogConfig       `yaml:"log"`
-	Pcap      PcapConfig      `yaml:"pcap"`
-	Server    ServerConfig    `yaml:"server"`
+	App        AppConfig        `yaml:"app"`
+	Wireshark  WiresharkConfig  `yaml:"wireshark"`
+	Database   DatabaseConfig   `yaml:"database"`
+	Auth       AuthConfig       `yaml:"auth"`
+	Log        LogConfig        `yaml:"log"`
+	Pcap       PcapConfig       `yaml:"pcap"`
+	Server     ServerConfig     `yaml:"server"`
+	ZeekRunner ZeekRunnerConfig `yaml:"zeek_runner"`
 }
 
 // AppConfig 应用配置
@@ -41,11 +42,11 @@ type WiresharkConfig struct {
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	Type            string `yaml:"type"`
-	SQLitePath      string `yaml:"sqlite_path"`
-	MaxOpenConns    int    `yaml:"max_open_conns"`
-	MaxIdleConns    int    `yaml:"max_idle_conns"`
-	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`
+	Type            string      `yaml:"type"`
+	SQLitePath      string      `yaml:"sqlite_path"`
+	MaxOpenConns    int         `yaml:"max_open_conns"`
+	MaxIdleConns    int         `yaml:"max_idle_conns"`
+	ConnMaxLifetime int         `yaml:"conn_max_lifetime"`
 	MySQL           MySQLConfig `yaml:"mysql"`
 }
 
@@ -60,18 +61,18 @@ type MySQLConfig struct {
 
 // AuthConfig 认证配置
 type AuthConfig struct {
-	SecretKey         string `yaml:"secret_key"`
-	TokenExpiry       int    `yaml:"token_expiry"`
-	RefreshTokenExpiry int   `yaml:"refresh_token_expiry"`
+	SecretKey          string `yaml:"secret_key"`
+	TokenExpiry        int    `yaml:"token_expiry"`
+	RefreshTokenExpiry int    `yaml:"refresh_token_expiry"`
 }
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level     string `yaml:"level"`
-	Format    string `yaml:"format"`
-	FilePath  string `yaml:"file_path"`
-	MaxSize   int    `yaml:"max_size"`
-	MaxAge    int    `yaml:"max_age"`
+	Level    string `yaml:"level"`
+	Format   string `yaml:"format"`
+	FilePath string `yaml:"file_path"`
+	MaxSize  int    `yaml:"max_size"`
+	MaxAge   int    `yaml:"max_age"`
 }
 
 // PcapConfig PCAP 文件配置
@@ -87,6 +88,30 @@ type ServerConfig struct {
 	Port         int    `yaml:"port"`
 	ReadTimeout  int    `yaml:"read_timeout"`
 	WriteTimeout int    `yaml:"write_timeout"`
+}
+
+// ZeekRunnerConfig Zeek Runner 服务配置
+type ZeekRunnerConfig struct {
+	GRPCAddress string          `yaml:"grpc_address"`
+	HTTPAddress string          `yaml:"http_address"`
+	Timeout     int             `yaml:"timeout"`
+	Enabled     bool            `yaml:"enabled"`
+	Retry       ZeekRetryConfig `yaml:"retry"`
+	Pool        ZeekPoolConfig  `yaml:"pool"`
+}
+
+// ZeekRetryConfig Zeek 重试配置
+type ZeekRetryConfig struct {
+	MaxAttempts      int `yaml:"max_attempts"`
+	BackoffBaseDelay int `yaml:"backoff_base_delay"`
+	BackoffMaxDelay  int `yaml:"backoff_max_delay"`
+}
+
+// ZeekPoolConfig Zeek 连接池配置
+type ZeekPoolConfig struct {
+	MaxIdleConns    int `yaml:"max_idle_conns"`
+	MaxOpenConns    int `yaml:"max_open_conns"`
+	ConnMaxLifetime int `yaml:"conn_max_lifetime"`
 }
 
 // Load 加载配置文件
@@ -163,6 +188,33 @@ func (c *Config) setDefaults() {
 	if c.Server.WriteTimeout == 0 {
 		c.Server.WriteTimeout = 30
 	}
+	if c.ZeekRunner.GRPCAddress == "" {
+		c.ZeekRunner.GRPCAddress = "localhost:50051"
+	}
+	if c.ZeekRunner.HTTPAddress == "" {
+		c.ZeekRunner.HTTPAddress = "http://localhost:8080"
+	}
+	if c.ZeekRunner.Timeout == 0 {
+		c.ZeekRunner.Timeout = 30
+	}
+	if c.ZeekRunner.Retry.MaxAttempts == 0 {
+		c.ZeekRunner.Retry.MaxAttempts = 3
+	}
+	if c.ZeekRunner.Retry.BackoffBaseDelay == 0 {
+		c.ZeekRunner.Retry.BackoffBaseDelay = 1
+	}
+	if c.ZeekRunner.Retry.BackoffMaxDelay == 0 {
+		c.ZeekRunner.Retry.BackoffMaxDelay = 10
+	}
+	if c.ZeekRunner.Pool.MaxIdleConns == 0 {
+		c.ZeekRunner.Pool.MaxIdleConns = 10
+	}
+	if c.ZeekRunner.Pool.MaxOpenConns == 0 {
+		c.ZeekRunner.Pool.MaxOpenConns = 20
+	}
+	if c.ZeekRunner.Pool.ConnMaxLifetime == 0 {
+		c.ZeekRunner.Pool.ConnMaxLifetime = 1800
+	}
 }
 
 // Get 获取全局配置
@@ -187,4 +239,30 @@ func (d *DatabaseConfig) GetMySQLConnectionString() string {
 		d.MySQL.Port,
 		d.MySQL.Database,
 	)
+}
+
+// GetZeekTimeout 获取 Zeek 超时时间（time.Duration）
+func (z *ZeekRunnerConfig) GetTimeout() time.Duration {
+	return time.Duration(z.Timeout) * time.Second
+}
+
+// IsEnabled 检查 Zeek 服务是否启用
+func (z *ZeekRunnerConfig) IsEnabled() bool {
+	return z.Enabled
+}
+
+// GetGRPCAddress 获取 gRPC 地址
+func (z *ZeekRunnerConfig) GetGRPCAddress() string {
+	if z.GRPCAddress == "" {
+		return "localhost:50051"
+	}
+	return z.GRPCAddress
+}
+
+// GetHTTPAddress 获取 HTTP 地址
+func (z *ZeekRunnerConfig) GetHTTPAddress() string {
+	if z.HTTPAddress == "" {
+		return "http://localhost:8080"
+	}
+	return z.HTTPAddress
 }

@@ -156,6 +156,14 @@
         selectedIds = isAllSelected ? [] : pcapFiles.map(f => f.id);
     }
 
+    function toggleSelectFile(id: number) {
+        if (selectedIds.includes(id)) {
+            selectedIds = selectedIds.filter(fid => fid !== id);
+        } else {
+            selectedIds = [...selectedIds, id];
+        }
+    }
+
     async function handleBatchDelete() {
         if (!confirm(`确定批量删除 ${selectedIds.length} 个流量包？`)) return;
         try {
@@ -274,13 +282,17 @@
             </thead>
             <tbody>
             {#each pcapFiles as file}
-                <tr class:selected-row={selectedIds.includes(file.id)}>
+                <tr 
+                    class:selected-row={selectedIds.includes(file.id)}
+                    on:click={() => toggleSelectFile(file.id)}
+                >
 
                     <td style="text-align: center;" on:click|stopPropagation>
                         <input type="checkbox"
                                bind:group={selectedIds}
                                value={file.id}
-                               class="checkbox-ui"/>
+                               class="checkbox-ui"
+                               on:click|stopPropagation/>
                     </td>
 
                     <td class="filename-cell" title={file.fileName}>
@@ -342,6 +354,7 @@
         flex-direction: column;
         position: relative;
         background-color: var(--bg-primary);
+        padding: 1.5rem;
     }
 
     .drag-overlay {
@@ -474,6 +487,11 @@
         table-layout: fixed;
     }
 
+    .data-table thead {
+        background: var(--bg-tertiary);
+        border-bottom: 1px solid var(--border-color);
+    }
+
     .data-table th {
         position: sticky;
         top: 0;
@@ -481,6 +499,7 @@
         padding: 12px;
         z-index: 10;
         color: var(--text-primary);
+        font-weight: 600;
         border-bottom: 1px solid var(--border-color);
     }
 
@@ -496,6 +515,18 @@
 
     .data-table tbody tr.selected-row {
         background: rgba(79, 70, 229, 0.1);
+    }
+
+    .data-table input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--color-primary);
+    }
+
+    .data-table th input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
     }
 
     .sticky-col-header {
