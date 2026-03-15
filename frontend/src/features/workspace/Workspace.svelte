@@ -5,6 +5,7 @@
     import { info as showInfo } from '../../stores/toast';
     import { onMount, createEventDispatcher } from 'svelte';
     import { app } from '../../stores/app';
+    import { WindowToggleMaximise } from '../../../wailsjs/runtime/runtime';
 
     let currentView: 'dashboard' | 'pcap-list' | 'pcap-detail' | 'live' | 'auto' = 'dashboard';
     
@@ -32,6 +33,10 @@
             window.removeEventListener('analyze', handleAnalyzeEvent);
         };
     });
+
+    function handleMaximize() {
+        WindowToggleMaximise();
+    }
 
     const features = [
         {
@@ -114,6 +119,10 @@
                         <span class="breadcrumb-item active">网卡列表</span>
                     {/if}
                 </div>
+                
+                <button class="window-control-btn" on:click={handleMaximize} title="最大化/还原窗口">
+                    <span class="btn-icon">⛶</span>
+                </button>
             </div>
 
             <div class="sub-content">
@@ -231,9 +240,37 @@
     .sub-header {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         padding: 0 0 12px 0;
         border-bottom: 1px solid var(--border-color);
         margin-bottom: 12px;
+    }
+    
+    /* 窗口控制按钮 */
+    .window-control-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+    
+    .window-control-btn:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+    }
+    
+    .btn-icon {
+        font-size: 1rem;
+        line-height: 1;
     }
 
     /* 面包屑导航样式 */
