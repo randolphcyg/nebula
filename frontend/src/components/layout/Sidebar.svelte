@@ -26,6 +26,7 @@
         { id: 'analyzer', label: '协议分析引擎', icon: '🔍' },
         { id: 'zeek', label: 'Zeek 入侵检测', icon: '🛡️' },
         { id: 'ai', label: 'Dify 智能诊断', icon: '🧠' },
+        { id: 'tools', label: '通用工具', icon: '🛠️' },
         { id: 'users', label: '用户管理', icon: '👥', adminOnly: true },
     ];
     

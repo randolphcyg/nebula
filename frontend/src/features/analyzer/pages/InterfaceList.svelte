@@ -143,116 +143,91 @@
 </div>
 
 <style>
-    /* Styles are 100% matched with PcapList.svelte for visual consistency */
     .list-container {
         height: 100%;
         display: flex;
         flex-direction: column;
         position: relative;
         background-color: var(--bg-primary);
-        padding: 1.5rem;
     }
 
-    .filter-panel {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        align-items: center;
-        padding: 12px;
-        background: var(--bg-secondary);
+    .filter-group input {
+        background: var(--bg-tertiary);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
-        margin-bottom: 12px;
+        color: var(--text-primary);
+        padding: 6px 10px;
+        border-radius: 6px;
+        outline: none;
+        font-size: 0.85rem;
     }
 
-    .filter-group { display: flex; align-items: center; gap: 8px; }
-    .filter-group label { color: var(--text-secondary); font-size: 0.85rem; }
-    .filter-group input { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: 6px; outline: none; font-size: 0.85rem; }
+    .import-action {
+        margin-left: auto;
+    }
 
-    .import-action { margin-left: auto; }
-    .primary-btn { background: var(--color-primary); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-    .primary-btn:hover:not(:disabled) { background: #4338ca; }
-    .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    /* 特有样式：表格固定列 */
+    .sticky-col-header {
+        position: sticky !important;
+        right: 0;
+        z-index: 20 !important;
+        background: var(--bg-tertiary);
+        box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+    }
 
-    .action-btn { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-    .action-btn:hover { background: var(--color-primary); border-color: var(--color-primary); color: white; }
-    .action-btn.outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
-    .action-btn.outline:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .sticky-col-body {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: var(--bg-secondary);
+        box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+    }
 
-    .table-wrapper { flex: 1; overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); }
-    .table-wrapper::-webkit-scrollbar {
+    .data-table tbody tr:hover .sticky-col-body {
+        background: var(--bg-tertiary);
+    }
+
+    .filename-text {
+        color: var(--color-info);
+        font-weight: 500;
+        font-family: 'Fira Code', monospace;
+    }
+
+    .status-dot {
+        display: inline-block;
         width: 8px;
         height: 8px;
-    }
-    .table-wrapper::-webkit-scrollbar-track {
-        background: var(--bg-primary);
-    }
-    .table-wrapper::-webkit-scrollbar-thumb {
-        background: var(--border-color);
-        border-radius: 4px;
-    }
-    .table-wrapper::-webkit-scrollbar-thumb:hover {
-        background: var(--border-color-light);
-    }
-    .data-table {
-        width: 100%;
-        min-width: 800px;
-        border-collapse: collapse;
-        text-align: left;
-        font-size: 0.85rem;
-        table-layout: fixed;
+        border-radius: 50%;
+        margin-right: 6px;
     }
 
-    .data-table thead {
-        background: var(--bg-tertiary);
-        border-bottom: 1px solid var(--border-color);
+    .status-dot.done {
+        background: #10b981;
     }
-
-    .data-table th {
-        position: sticky;
-        top: 0;
-        background: var(--bg-tertiary);
-        padding: 12px;
-        z-index: 10;
-        color: var(--text-primary);
-        font-weight: 600;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .data-table td {
-        padding: 12px;
-        border-bottom: 1px solid var(--border-color);
-        color: var(--text-secondary);
-    }
-
-    .data-table tbody tr:hover {
-        background: var(--bg-tertiary);
-    }
-
-    .data-table input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-        accent-color: var(--color-primary);
-    }
-
-    .data-table th input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-    }
-
-    .sticky-col-header { position: sticky !important; right: 0; z-index: 20 !important; background: var(--bg-tertiary); box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1); }
-    .sticky-col-body { position: sticky; right: 0; z-index: 2; background: var(--bg-secondary); box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1); }
-    .data-table tbody tr:hover .sticky-col-body { background: var(--bg-tertiary); }
-
-    .filename-text { color: var(--color-info); font-weight: 500; font-family: 'Fira Code', monospace;}
-
-    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-    .status-dot.done { background: #10b981; }
 
     /* Address specific styles */
-    .address-list { display: flex; flex-direction: column; gap: 4px; }
-    .address-item { background: var(--bg-tertiary); display: inline-block; width: fit-content; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);}
-    .addr-ip { color: var(--text-primary); font-family: monospace;}
-    .addr-mask { color: var(--text-secondary); font-size: 0.75rem; font-family: monospace;}
+    .address-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .address-item {
+        background: var(--bg-tertiary);
+        display: inline-block;
+        width: fit-content;
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+    }
+
+    .addr-ip {
+        color: var(--text-primary);
+        font-family: monospace;
+    }
+
+    .addr-mask {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-family: monospace;
+    }
 </style>

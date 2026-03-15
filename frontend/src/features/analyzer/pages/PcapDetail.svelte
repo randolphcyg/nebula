@@ -305,7 +305,7 @@
         </div>
 
         <div class="packet-list-area">
-            <table class="data-table">
+            <table class="data-table compact">
                 <thead>
                 <tr>
                     <th style="width: 60px;">No.</th>
@@ -496,22 +496,67 @@
     .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .packet-list-area { flex: 1; overflow: auto; }
-    .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem; table-layout: fixed;}
-    .data-table th { position: sticky; top: 0; background: var(--bg-tertiary); padding: 6px 12px; color: var(--text-primary); z-index: 10; font-weight: normal;}
-    .data-table td { padding: 4px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); white-space: nowrap;}
-    .data-table tbody tr:hover { background: var(--bg-tertiary); cursor: pointer;}
+    
     .active-row { background: rgba(79, 70, 229, 0.3) !important; }
     .info-cell { overflow: hidden; text-overflow: ellipsis; }
     .badge { background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-family: monospace; border: 1px solid var(--border-color);}
 
-    /* 分页器 (✨ 更新样式) */
-    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: var(--bg-tertiary); border-top: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-secondary); }
-    .page-info { display: flex; align-items: center; gap: 12px; }
-    .size-selector { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 2px 6px; border-radius: 4px; outline: none; font-size: 0.75rem; cursor: pointer; }
-    .page-controls { display: flex; align-items: center; gap: 6px; }
-    .page-controls button { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-size: 0.8rem;}
-    .page-controls button:hover:not(:disabled) { background: var(--color-primary); border-color: var(--color-primary); color: white; }
-    .page-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* 分页器 */
+    .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 16px;
+        background: var(--bg-tertiary);
+        border-top: 1px solid var(--border-color);
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .page-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .size-selector {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        outline: none;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+
+    .page-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .page-controls button {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 4px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.8rem;
+    }
+
+    .page-controls button:hover:not(:disabled) {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+    }
+
+    .page-controls button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
 
     /* ================= 层级 3: 帧系列透视 ================= */
     .level-3 { min-height: 550px; flex: 1 0 auto; }

@@ -279,11 +279,6 @@
     .action-btn:hover { background: var(--color-primary-hover); }
     .action-btn.outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
     .action-btn.outline:hover { background: var(--bg-tertiary); color: var(--text-primary); }
-    /* 将行内元素改为块级元素，强制换行，并增加段落间距 */
-    .stream-chunk {
-        display: block;
-        margin-bottom: 12px;
-    }
 
     .client-text { color: #cc0000; }
     .server-text { color: #0000cc; }

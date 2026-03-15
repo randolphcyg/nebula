@@ -515,7 +515,7 @@
             <div class="loading">加载中...</div>
         {:else}
             <div class="table-wrapper">
-                <table class="user-table">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>
@@ -958,7 +958,7 @@
         color: white;
     }
 
-    /* 表格 */
+    /* 表格容器 */
     .user-list-container {
         background: var(--bg-secondary);
         border-radius: var(--radius-lg);
@@ -975,55 +975,6 @@
         padding: 3rem;
         text-align: center;
         color: var(--text-secondary);
-    }
-
-    .user-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 1200px;
-        font-size: 0.875rem;
-    }
-
-    .user-table thead {
-        background: var(--bg-tertiary);
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .user-table th {
-        padding: 12px;
-        text-align: left;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    /* 复选框样式优化 */
-    .user-table input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-        accent-color: var(--color-primary);
-    }
-
-    .user-table th input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-    }
-
-    .user-table td {
-        padding: 12px;
-        border-bottom: 1px solid var(--border-color);
-        font-size: 0.875rem;
-        color: var(--text-secondary);
-    }
-
-    .user-table tbody tr:hover {
-        background: var(--bg-tertiary);
-    }
-
-    .user-table tbody tr.selected {
-        background: rgba(59, 130, 246, 0.1);
-        border-left: 3px solid var(--color-primary);
     }
 
     /* 用户名列 */
@@ -1238,22 +1189,6 @@
         color: white;
     }
 
-    /* 空状态 */
-    .empty-state {
-        padding: 3rem !important;
-        text-align: center;
-    }
-
-    .empty-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-
-    .empty-text {
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-    }
-
     /* 模态框 */
     .modal-overlay {
         position: fixed;
@@ -1326,19 +1261,24 @@
         border-collapse: collapse;
     }
 
-    .log-table th {
+    .log-table th,
+    .log-table td {
         padding: 0.75rem;
         text-align: left;
         font-size: 0.875rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .log-table th {
         font-weight: 600;
         color: var(--text-primary);
-        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-tertiary);
     }
 
     .log-table td {
         padding: 0.75rem;
         font-size: 0.875rem;
-        color: var(--text-primary);
+        color: var(--text-secondary);
         border-bottom: 1px solid var(--border-color);
     }
 

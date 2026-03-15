@@ -601,40 +601,6 @@
         border-top: 1px solid var(--border-color-light);
     }
 
-    .password-form .action-btn {
-        padding: 0.625rem 1.5rem;
-        font-size: 0.9rem;
-        font-weight: 500;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        transition: var(--transition-fast);
-        border: none;
-    }
-
-    .password-form .action-btn.primary {
-        background: var(--color-primary);
-        color: white;
-    }
-
-    .password-form .action-btn.primary:hover:not(:disabled) {
-        background: var(--color-primary-dark);
-    }
-
-    .password-form .action-btn.outline {
-        background: transparent;
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-    }
-
-    .password-form .action-btn.outline:hover {
-        background: var(--bg-tertiary);
-    }
-
-    .password-form .action-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
     /* 偏好设置分组 */
     .settings-group {
         margin-bottom: 2rem;

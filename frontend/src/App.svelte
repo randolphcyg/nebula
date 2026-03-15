@@ -12,6 +12,7 @@
     import PcapList from './features/analyzer/pages/PcapList.svelte';
     import UserManagement from './features/admin/pages/UserManagement.svelte';
     import Profile from './features/user/pages/Profile.svelte';
+    import Tools from './features/tools/pages/Tools.svelte';
     import { GetFileList, GetWiresharkVersion, GetZeekVersions, IsZeekEnabled } from '../wailsjs/go/main/App';
     
     let isAuthenticated = false;
@@ -157,7 +158,7 @@
                     </div>
 
                     <div class="dash-grid">
-                        <div class="dash-card clickable" on:click={() => app.setActiveTab('pcapList')}>
+                        <div class="dash-card">
                             <div class="card-icon pcap-icon">📦</div>
                             <div class="card-content">
                                 <div class="card-label">本地流量包沉淀</div>
@@ -251,6 +252,9 @@
                         <p>选中流量自动发送 AI 诊断，功能开发中...</p>
                     </div>
                 </div>
+            {:else if activeTab === 'tools'}
+                <!-- 通用工具 -->
+                <Tools />
             {/if}
         </Sidebar>
     {/if}
